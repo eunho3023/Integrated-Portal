@@ -28,7 +28,7 @@ import androidx.room.RoomDatabase
         ProjectResourceEntity::class,
         ProjectEvaluationEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "integrated_management_db"
                 )
                 .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
                 INSTANCE = instance
                 instance
