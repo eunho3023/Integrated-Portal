@@ -1,0 +1,6 @@
+{
+  "name": "통합 관리 시스템",
+  "description": "대여 장부, 익명 건의함, 교복 착용 점검, 출결, 상벌점, 학급비 등 학교 및 학급 생활을 위한 통합 관리 시스템",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
