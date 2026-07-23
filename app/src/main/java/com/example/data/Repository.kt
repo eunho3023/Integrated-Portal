@@ -72,12 +72,16 @@ class AppRepository(private val appDao: AppDao) {
     }
 
     suspend fun getUserByUsername(username: String): UserEntity? {
-        val local = appDao.getUserByUsername(username)
+        val cleanUsername = username.trim()
+        if (cleanUsername.isEmpty()) return null
+
+        val local = appDao.getUserByUsername(cleanUsername)
         if (local != null) return local
+
         try {
             val snapshot = ref?.child("users")
                 ?.orderByChild("username")
-                ?.equalTo(username)
+                ?.equalTo(cleanUsername)
                 ?.get()
                 ?.awaitTask()
             if (snapshot != null && snapshot.exists() && snapshot.hasChildren()) {
@@ -92,8 +96,27 @@ class AppRepository(private val appDao: AppDao) {
                 }
             }
         } catch (e: Exception) {
-            Log.e("RealtimeDBSync", "Error getting user by username from Firebase", e)
+            Log.e("RealtimeDBSync", "Error getting user by username query from Firebase", e)
         }
+
+        try {
+            val allUsersSnapshot = ref?.child("users")?.get()?.awaitTask()
+            if (allUsersSnapshot != null && allUsersSnapshot.exists()) {
+                for (child in allUsersSnapshot.children) {
+                    val user = mapSnapshotToUser(child)
+                    if (user.username.trim().equals(cleanUsername, ignoreCase = true)) {
+                        appDao.insertUser(user)
+                        if (user.schoolId.isNotEmpty()) {
+                            getSchoolById(user.schoolId)
+                        }
+                        return user
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("RealtimeDBSync", "Error getting user by username full scan from Firebase", e)
+        }
+
         return null
     }
 

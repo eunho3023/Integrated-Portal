@@ -9,7 +9,7 @@ interface AppDao {
     @Query("SELECT * FROM users WHERE uid = :uid")
     suspend fun getUserById(uid: String): UserEntity?
 
-    @Query("SELECT * FROM users WHERE username = :username LIMIT 1")
+    @Query("SELECT * FROM users WHERE LOWER(username) = LOWER(:username) LIMIT 1")
     suspend fun getUserByUsername(username: String): UserEntity?
 
     @Query("SELECT * FROM users WHERE displayName = :displayName AND phoneNumber = :phoneNumber LIMIT 1")

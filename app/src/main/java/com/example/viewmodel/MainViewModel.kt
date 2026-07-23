@@ -587,8 +587,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun login(username: String, pin: String, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
+                val cleanUsername = username.trim()
+                val cleanPin = pin.trim()
+
+                if (cleanUsername.isEmpty() || cleanPin.isEmpty()) {
+                    onError("아이디와 비밀번호를 모두 입력해 주세요.")
+                    return@launch
+                }
+
                 // Master Admin account auto-provisioning
-                if (username.trim().lowercase() == "admin" && (pin.trim() == "admin1234" || pin.trim() == ADMIN_PASSWORD)) {
+                if (cleanUsername.lowercase() == "admin" && (cleanPin == "admin1234" || cleanPin == ADMIN_PASSWORD)) {
                     var user = repository.getUserByUsername("admin")
                     if (user == null) {
                         val masterUser = UserEntity(
@@ -613,12 +621,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                val user = repository.getUserByUsername(username.trim())
+                val user = repository.getUserByUsername(cleanUsername)
                 if (user == null) {
-                    onError("아이디 또는 비밀번호가 올바르지 않습니다.")
+                    onError("아이디가 존재하지 않습니다. 회원가입을 진행해 주세요.")
                     return@launch
                 }
-                if (user.password.isNotEmpty() && user.password != pin.trim()) {
+                if (user.password.isNotEmpty() && user.password.trim() != cleanPin) {
                     onError("비밀번호가 올바르지 않습니다.")
                     return@launch
                 }
@@ -626,7 +634,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 currentSchool = repository.getSchoolById(user.schoolId)
                 isAuthModalVisible = false
                 autoGrantAccessByRole()
-                saveAutoLoginUser(username.trim())
+                saveAutoLoginUser(user.username)
                 showToast("👤 ${user.displayName}님 환영합니다!")
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Login error", e)
