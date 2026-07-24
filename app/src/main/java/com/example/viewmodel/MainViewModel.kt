@@ -68,6 +68,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Active tab state
     var activeTab by mutableStateOf("home-tab")
+    val tabHistory = mutableStateListOf<String>()
+
+    fun selectTab(tabId: String) {
+        if (activeTab != tabId) {
+            if (activeTab.isNotEmpty()) {
+                if (tabHistory.isEmpty() || tabHistory.last() != activeTab) {
+                    tabHistory.add(activeTab)
+                }
+            }
+            activeTab = tabId
+        }
+    }
+
+    fun navigateBack(): Boolean {
+        if (tabHistory.isNotEmpty()) {
+            val prevTab = tabHistory.removeAt(tabHistory.size - 1)
+            activeTab = prevTab
+            return true
+        } else if (activeTab != "home-tab") {
+            activeTab = "home-tab"
+            return true
+        }
+        return false
+    }
 
     // UI unlock/security states (by password or role auto-grant)
     var rentAdminUnlocked by mutableStateOf(false)

@@ -65,16 +65,23 @@ fun AppScaffold() {
     val currentUser = viewModel.currentUser
     val currentSchool = viewModel.currentSchool
     var isWithdrawDialogVisible by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showExitAppDialog by remember { mutableStateOf(false) }
     var showApkDownloadInfoDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    // 📱 뒤로가기 버튼(BackHandler) 처리: 드로어 닫기 또는 앱 종료 확인 알림창
+    // 📱 뒤로가기 버튼(BackHandler) 처리: 드로어 닫기, 모달 닫기, 이전 탭으로 이동 또는 앱 종료 확인 알림창
     BackHandler(enabled = true) {
         if (drawerState.isOpen) {
             coroutineScope.launch { drawerState.close() }
+        } else if (viewModel.activeChatPeerId != null) {
+            viewModel.activeChatPeerId = null
+        } else if (viewModel.isAuthModalVisible) {
+            viewModel.isAuthModalVisible = false
+        } else if (viewModel.navigateBack()) {
+            // Navigated back to previous tab item
         } else {
             showExitAppDialog = true
         }
@@ -230,7 +237,7 @@ fun AppScaffold() {
                                 },
                                 selected = isActive,
                                 onClick = {
-                                    viewModel.activeTab = tab.first
+                                    viewModel.selectTab(tab.first)
                                     coroutineScope.launch { drawerState.close() }
                                 },
                                 colors = NavigationDrawerItemDefaults.colors(
@@ -476,7 +483,7 @@ fun AppScaffold() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(
-                            onClick = { viewModel.logout() },
+                            onClick = { showLogoutConfirmDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f), contentColor = SpaceText),
                             shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.height(30.dp),
@@ -525,7 +532,7 @@ fun AppScaffold() {
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isActive) accentColor.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.03f))
                             .border(1.dp, if (isActive) accentColor else Color.Transparent, RoundedCornerShape(8.dp))
-                            .clickable { viewModel.activeTab = tab.first }
+                            .clickable { viewModel.selectTab(tab.first) }
                             .padding(horizontal = 14.dp, vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -634,6 +641,69 @@ fun AppScaffold() {
 
         if (viewModel.isAuthModalVisible) {
             AuthModalDialog(viewModel = viewModel)
+        }
+
+        if (showLogoutConfirmDialog) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showLogoutConfirmDialog = false }) {
+                Card(
+                    modifier = Modifier
+                        .width(320.dp)
+                        .wrapContentHeight()
+                        .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
+                    colors = CardDefaults.cardColors(containerColor = PanelSolid),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "🔒 로그아웃 확인",
+                            color = NeonCyan,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "정말 로그아웃 하시겠습니까?",
+                            color = SpaceText,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showLogoutConfirmDialog = false },
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, SpaceTextSoft.copy(alpha = 0.3f)),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = SpaceText)
+                            ) {
+                                Text("취소", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    showLogoutConfirmDialog = false
+                                    viewModel.logout()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black)
+                            ) {
+                                Text("로그아웃", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (isWithdrawDialogVisible) {
@@ -1299,36 +1369,6 @@ fun AuthModalDialog(viewModel: MainViewModel) {
                         fontSize = 11.sp,
                         lineHeight = 15.sp
                     )
-
-                    // Master Admin Quick Fill Banner
-                    if (!isRegisterMode) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    username = "admin"
-                                    password = "admin1234"
-                                },
-                            colors = CardDefaults.cardColors(containerColor = NeonCyan.copy(alpha = 0.12f)),
-                            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.4f)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text("👑", fontSize = 16.sp)
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("총괄 최고 관리자 계정 (클릭 시 자동입력)", color = NeonCyan, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                    Text("아이디: admin / 비밀번호: admin1234", color = SpaceText, fontSize = 11.sp)
-                                }
-                                Text("입력", color = Color.Black, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(NeonCyan, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = Color(0x118CAEC6))
 
                     OutlinedTextField(
                         value = username,
@@ -2053,7 +2093,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                             ) {
                                 rowItems.forEach { (tabId, label, color) ->
                                     Button(
-                                        onClick = { viewModel.activeTab = tabId },
+                                        onClick = { viewModel.selectTab(tabId) },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = color.copy(alpha = 0.12f),
                                             contentColor = color
