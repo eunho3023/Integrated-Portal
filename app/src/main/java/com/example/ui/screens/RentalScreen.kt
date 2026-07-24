@@ -32,6 +32,7 @@ import com.example.data.RentalEntity
 import com.example.ui.theme.*
 import com.example.viewmodel.MainViewModel
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RentalScreen(
     viewModel: MainViewModel,
@@ -51,10 +52,6 @@ fun RentalScreen(
     var rentReturnDate by remember { mutableStateOf(viewModel.todayDateString) }
 
     // Dialog state
-    var showUnlockDialog by remember { mutableStateOf(false) }
-    var passcodeText by remember { mutableStateOf("") }
-    var passcodeError by remember { mutableStateOf("") }
-
     var showAddItemDialog by remember { mutableStateOf(false) }
     var newItemName by remember { mutableStateOf("") }
     var newItemQty by remember { mutableStateOf("5") }
@@ -76,7 +73,7 @@ fun RentalScreen(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedKeep(14.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. Stock Status Chips
         Text(
@@ -239,98 +236,63 @@ fun RentalScreen(
 
             // Item Dropdown Selector
             Text("대여 물품 선택", color = SpaceTextSoft, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            var showCustomItemInput by remember { mutableStateOf(false) }
 
-            if (showCustomItemInput) {
-                OutlinedTextField(
-                    value = rentItem,
-                    onValueChange = { rentItem = it },
-                    label = { Text("직접 대여 물품명 입력", fontSize = 12.sp) },
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                var expanded by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    onClick = { expanded = true },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = SpaceText,
-                        unfocusedTextColor = SpaceText,
-                        focusedBorderColor = NeonCyan,
-                        unfocusedBorderColor = SpaceTextSoft
-                    ),
-                    trailingIcon = {
-                        IconButton(onClick = { showCustomItemInput = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "목록으로 전환", tint = SpaceTextSoft)
-                        }
-                    }
-                )
-            } else {
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    var expanded by remember { mutableStateOf(false) }
-                    OutlinedButton(
-                        onClick = { expanded = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SpaceText)
+                ) {
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SpaceText)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = rentItem.ifEmpty { "대여 물품 선택" },
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = NeonCyan)
-                        }
+                        Text(
+                            text = rentItem.ifEmpty { "대여 물품 선택" },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = NeonCyan)
                     }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier.background(PanelSolid)
-                    ) {
-                        if (stocks.isEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text("등록된 수량 정보가 없습니다 (직접 입력 가능)", color = SpaceTextSoft, fontSize = 12.sp) },
-                                onClick = { expanded = false; showCustomItemInput = true }
-                            )
-                        } else {
-                            stocks.forEach { stock ->
-                                val currentActiveCount = rentals.count { it.item == stock.itemName && it.status == "대여중" }
-                                val remainQty = stock.totalQty - currentActiveCount
-                                val isOutOfStock = remainQty <= 0
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = stock.itemName,
-                                                color = if (isOutOfStock) NeonRed else SpaceText,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = if (isOutOfStock) "(잔여: 0개 - 품절)" else "(잔여: ${remainQty}개)",
-                                                fontSize = 11.sp,
-                                                color = if (isOutOfStock) NeonRed else NeonGreen
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        rentItem = stock.itemName
-                                        expanded = false
-                                    }
-                                )
-                            }
-                            HorizontalDivider(color = SpaceTextSoft.copy(alpha = 0.3f))
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(PanelSolid)
+                ) {
+                    if (stocks.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("등록된 물품이 없습니다", color = SpaceTextSoft, fontSize = 12.sp) },
+                            onClick = { expanded = false },
+                            enabled = false
+                        )
+                    } else {
+                        stocks.forEach { stock ->
+                            val currentActiveCount = rentals.count { it.item == stock.itemName && it.status == "대여중" }
+                            val remainQty = stock.totalQty - currentActiveCount
+                            val isOutOfStock = remainQty <= 0
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Edit, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("✏️ 직접 물품명 입력하기", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = stock.itemName,
+                                            color = if (isOutOfStock) NeonRed else SpaceText,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (isOutOfStock) "(잔여: 0개 - 품절)" else "(잔여: ${remainQty}개)",
+                                            fontSize = 11.sp,
+                                            color = if (isOutOfStock) NeonRed else NeonGreen
+                                        )
                                     }
                                 },
                                 onClick = {
+                                    rentItem = stock.itemName
                                     expanded = false
-                                    showCustomItemInput = true
                                 }
                             )
                         }
@@ -427,41 +389,47 @@ fun RentalScreen(
             }
         }
 
-        // 3. Admin Tools Section
-        if (!viewModel.rentAdminUnlocked) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showUnlockDialog = true }
-                    .border(1.dp, NeonAmber.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                    .background(NeonAmber.copy(alpha = 0.05f))
-                    .padding(14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = NeonAmber, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("🔓 관리자 메뉴 열기 (교사 비밀번호)", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-        } else {
-            GlassmorphicCard(accentColor = NeonAmber) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+        // 3. Admin Tools Section (학생 계정에게는 안 뜨게 처리, 비밀번호 없이 즉시 해제)
+        if (viewModel.currentUser?.role != "student") {
+            if (!viewModel.rentAdminUnlocked) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            viewModel.rentAdminUnlocked = true
+                            viewModel.showToast("🔓 대여 관리자 권한이 활성화되었습니다.")
+                        }
+                        .border(1.dp, NeonAmber.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .background(NeonAmber.copy(alpha = 0.05f))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("⚙️ 관리자 설정 (잠금해제됨)", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    IconButton(onClick = { viewModel.rentAdminUnlocked = false }) {
-                        Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = NeonAmber)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LockOpen, contentDescription = null, tint = NeonAmber, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("🔓 관리자 메뉴 열기", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+            } else {
+                GlassmorphicCard(accentColor = NeonAmber) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("⚙️ 관리자 설정 (잠금해제됨)", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        IconButton(onClick = { viewModel.rentAdminUnlocked = false }) {
+                            Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = NeonAmber)
+                        }
+                    }
 
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    mainAxisSpacing = 8.dp,
-                    crossAxisSpacing = 8.dp
-                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                     // CSV Copy
                     Button(
                         onClick = {
@@ -564,6 +532,7 @@ fun RentalScreen(
                 }
             }
         }
+    }
 
         // 4. Search & Filter Controls
         Row(
@@ -722,56 +691,6 @@ fun RentalScreen(
     // -------------------------------------------------------------
     // MODAL DIALOGS
     // -------------------------------------------------------------
-    if (showUnlockDialog) {
-        AlertDialog(
-            onDismissRequest = { showUnlockDialog = false },
-            title = { Text("🔓 관리자 모드 잠금 해제", color = SpaceText, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("관리자(교사) 비밀번호를 입력하세요.", color = SpaceTextSoft, fontSize = 13.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = passcodeText,
-                        onValueChange = { passcodeText = it },
-                        placeholder = { Text("기본값: 1234") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = PanelSolid,
-                            unfocusedContainerColor = PanelSolid,
-                            focusedTextColor = SpaceText,
-                            unfocusedTextColor = SpaceText
-                        )
-                    )
-                    if (passcodeError.isNotEmpty()) {
-                        Text(passcodeError, color = NeonRed, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (passcodeText == viewModel.ADMIN_PASSWORD) {
-                        viewModel.rentAdminUnlocked = true
-                        showUnlockDialog = false
-                        passcodeText = ""
-                        passcodeError = ""
-                        viewModel.showToast("🔓 대여 관리자 권한이 활성화되었습니다.")
-                    } else {
-                        passcodeError = "❌ 비밀번호가 올바르지 않습니다."
-                    }
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                }) {
-                    Text("확인", color = NeonCyan, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUnlockDialog = false; passcodeText = ""; passcodeError = "" }) {
-                    Text("취소", color = SpaceTextSoft)
-                }
-            }
-        )
-    }
-
     if (showAddItemDialog) {
         AlertDialog(
             onDismissRequest = { showAddItemDialog = false },
@@ -888,92 +807,4 @@ fun RentalScreen(
     }
 }
 
-@Composable
-fun GlassmorphicCard(
-    modifier: Modifier = Modifier,
-    accentColor: Color = NeonCyan,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-        colors = CardDefaults.cardColors(
-            containerColor = PanelGlass
-        ),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
-            content()
-        }
-    }
-}
 
-// FlowRow support
-@Composable
-fun FlowRow(
-    modifier: Modifier = Modifier,
-    mainAxisSpacing: androidx.compose.ui.unit.Dp = 0.dp,
-    crossAxisSpacing: androidx.compose.ui.unit.Dp = 0.dp,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.ui.layout.Layout(
-        content = content,
-        modifier = modifier
-    ) { measurables, constraints ->
-        val mainAxisSpacingPx = mainAxisSpacing.roundToPx()
-        val crossAxisSpacingPx = crossAxisSpacing.roundToPx()
-
-        val lines = mutableListOf<List<androidx.compose.ui.layout.Placeable>>()
-        val lineHeights = mutableListOf<Int>()
-
-        var currentLine = mutableListOf<androidx.compose.ui.layout.Placeable>()
-        var currentLineWidth = 0
-        var currentLineHeight = 0
-
-        measurables.forEach { measurable ->
-            val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-            val spacing = if (currentLine.isEmpty()) 0 else mainAxisSpacingPx
-
-            if (currentLineWidth + spacing + placeable.width <= constraints.maxWidth) {
-                currentLine.add(placeable)
-                currentLineWidth += spacing + placeable.width
-                currentLineHeight = maxOf(currentLineHeight, placeable.height)
-            } else {
-                lines.add(currentLine)
-                lineHeights.add(currentLineHeight)
-
-                currentLine = mutableListOf(placeable)
-                currentLineWidth = placeable.width
-                currentLineHeight = placeable.height
-            }
-        }
-
-        if (currentLine.isNotEmpty()) {
-            lines.add(currentLine)
-            lineHeights.add(currentLineHeight)
-        }
-
-        val width = constraints.maxWidth
-        val height = (lineHeights.sum() + (lines.size - 1).coerceAtLeast(0) * crossAxisSpacingPx)
-            .coerceAtMost(constraints.maxHeight)
-
-        layout(width, height) {
-            var yOffset = 0
-            lines.forEachIndexed { lineIndex, line ->
-                var xOffset = 0
-                line.forEach { placeable ->
-                    placeable.placeRelative(xOffset, yOffset)
-                    xOffset += placeable.width + mainAxisSpacingPx
-                }
-                yOffset += lineHeights[lineIndex] + crossAxisSpacingPx
-            }
-        }
-    }
-}
-
-// Spaced Arrangement helper
-fun Arrangement.spacedKeep(space: androidx.compose.ui.unit.Dp): Arrangement.Vertical =
-    Arrangement.spacedBy(space)

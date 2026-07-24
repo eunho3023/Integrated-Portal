@@ -62,7 +62,7 @@ fun SuggestScreen(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedKeep(14.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. Suggestion Summary Chips
         Row(
@@ -259,48 +259,34 @@ fun SuggestScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            val isStudent = viewModel.currentUser?.role == "student"
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                // View Admin
-                Column(modifier = Modifier.weight(1.2f)) {
-                    Text("전체 열람 (교사 관리자)", color = SpaceTextSoft, fontSize = 11.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = adminPasswordText,
-                        onValueChange = { adminPasswordText = it },
-                        placeholder = { Text("비밀번호") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = PanelSolid,
-                            unfocusedContainerColor = PanelSolid,
-                            focusedTextColor = SpaceText,
-                            unfocusedTextColor = SpaceText
-                        )
-                    )
-                }
+            if (!isStudent) {
+                Spacer(modifier = Modifier.height(14.dp))
 
-                Button(
-                    onClick = {
-                        if (adminPasswordText == viewModel.ADMIN_PASSWORD) {
-                            viewModel.suggestViewMode = "admin"
-                            adminPasswordText = ""
-                            viewModel.showToast("🔓 전체 건의 목록이 열람되었습니다.")
-                        } else {
-                            viewModel.showToast("❌ 비밀번호가 올바르지 않습니다.")
-                        }
-                        keyboardController?.hide()
-                        focusManager.clearFocus()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonAmber.copy(alpha = 0.15f), contentColor = NeonAmber),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(56.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("열람", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("🔓 전체 건의 열람 (교사/임원 전용)", color = SpaceTextSoft, fontSize = 11.sp)
+                        Text("비밀번호 입력 없이 전체 건의 목록을 바로 열람합니다.", color = SpaceTextSoft.copy(alpha = 0.7f), fontSize = 10.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.suggestViewMode = "admin"
+                            viewModel.showToast("🔓 전체 건의 목록이 열람되었습니다.")
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonAmber.copy(alpha = 0.15f), contentColor = NeonAmber),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Text("전체 열람", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
 
@@ -328,7 +314,7 @@ fun SuggestScreen(
         }
 
         // 4. Exporters & Data Erasers for Admin view
-        if (viewModel.suggestViewMode == "admin") {
+        if (viewModel.suggestViewMode == "admin" && viewModel.currentUser?.role != "student") {
             GlassmorphicCard(accentColor = NeonAmber) {
                 Text("🔐 관리자 전용 제어", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
                 Row(
@@ -392,7 +378,7 @@ fun SuggestScreen(
                 )
             }
         } else {
-            val visibleSuggestions = if (viewModel.suggestViewMode == "admin") {
+            val visibleSuggestions = if (viewModel.suggestViewMode == "admin" && viewModel.currentUser?.role != "student") {
                 suggestions
             } else {
                 suggestions.filter { it.studentId == viewModel.suggestStudentIdSearch }

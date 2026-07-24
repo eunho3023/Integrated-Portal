@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalLayoutApi::class)
+
 package com.example.ui.screens
 
 import android.content.ClipData
@@ -25,6 +27,7 @@ import com.example.data.*
 import com.example.ui.theme.*
 import com.example.viewmodel.MainViewModel
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChecksScreen(
     viewModel: MainViewModel,
@@ -147,7 +150,7 @@ fun UniformCheckTab(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { viewModel.bulkSetUniformStatus(selectedGradeLocal, selectedClassLocal, "착용") },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonGreen.copy(alpha = 0.15f), contentColor = NeonGreen),
@@ -494,7 +497,7 @@ fun AttendanceCheckTab(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { viewModel.bulkSetAttendanceStatus(selectedGradeLocal, selectedClassLocal, "출석") },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonGreen.copy(alpha = 0.15f), contentColor = NeonGreen),

@@ -229,43 +229,35 @@ fun FundTab(viewModel: MainViewModel) {
     val balance = incomeTotal - expenseTotal
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        // Unlock Panel
+        // Unlock Panel (학생 계정에게는 안 뜨게 처리, 비밀번호 없이 해제)
+        val isStudent = viewModel.currentUser?.role == "student"
         if (!viewModel.fundUnlocked) {
-            GlassmorphicCard(accentColor = NeonCyan) {
-                Text("💰 학생회 및 교사 전용 학급비 내역", color = NeonCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("공금 내역을 확인 및 등록하려면 비밀번호 입력이 필요합니다.", color = SpaceTextSoft, fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = pwText,
-                        onValueChange = { pwText = it },
-                        placeholder = { Text("확인 번호 입력") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = PanelSolid, unfocusedContainerColor = PanelSolid, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(
-                        onClick = {
-                            if (pwText == viewModel.STAFF_PASSWORD || pwText == viewModel.ADMIN_PASSWORD) {
-                                viewModel.fundUnlocked = true
-                                pwText = ""
-                                viewModel.showToast("🔓 학급비 장부 권한이 활성화되었습니다.")
-                            } else {
-                                viewModel.showToast("❌ 비밀번호 오류.")
-                            }
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
-                        shape = RoundedCornerShape(8.dp)
+            if (!isStudent) {
+                GlassmorphicCard(accentColor = NeonCyan) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("해제", fontWeight = FontWeight.Bold, color = Color.Black)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("💰 학생회 및 교사 전용 학급비 장부", color = NeonCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("비밀번호 입력 없이 장부를 열람 및 관리합니다.", color = SpaceTextSoft, fontSize = 12.sp)
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.fundUnlocked = true
+                                viewModel.showToast("🔓 학급비 장부 권한이 활성화되었습니다.")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("열기", fontWeight = FontWeight.Bold, color = Color.Black)
+                        }
                     }
+                }
+            } else {
+                GlassmorphicCard(accentColor = NeonCyan) {
+                    Text("🔒 학급비 장부는 학생회 및 교사 전용 메뉴입니다.", color = SpaceTextSoft, fontSize = 12.5.sp)
                 }
             }
         } else {
@@ -947,59 +939,45 @@ fun LostTab(viewModel: MainViewModel) {
             }
         }
 
-        // Admin lock
-        if (!viewModel.lostAdminUnlocked) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        // prompt
-                    }
-                    .border(1.dp, NeonAmber.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                    .background(NeonAmber.copy(alpha = 0.05f))
-                    .padding(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+        // Admin lock (학생 계정 안 보이게 처리, 비밀번호 없이 해제)
+        val isStudent = viewModel.currentUser?.role == "student"
+        if (!isStudent) {
+            if (!viewModel.lostAdminUnlocked) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            viewModel.lostAdminUnlocked = true
+                            viewModel.showToast("🔓 분실물 관리 모드가 활성화되었습니다.")
+                        }
+                        .border(1.dp, NeonAmber.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .background(NeonAmber.copy(alpha = 0.05f))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    OutlinedTextField(
-                        value = pwText,
-                        onValueChange = { pwText = it },
-                        placeholder = { Text("교사 암호 입력") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = PanelSolid, unfocusedContainerColor = PanelSolid, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
-                        modifier = Modifier.height(44.dp).width(160.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (pwText == viewModel.ADMIN_PASSWORD) {
-                                viewModel.lostAdminUnlocked = true
-                                pwText = ""
-                            }
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonAmber)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("관리", color = Color.Black)
+                        Icon(Icons.Default.LockOpen, contentDescription = null, tint = NeonAmber, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("🔓 분실물 관리자 모드 열기", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("🔓 관리자 모드 활성화됨", color = NeonAmber, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Button(
-                    onClick = { viewModel.clearLostData() },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed.copy(alpha = 0.15f), contentColor = NeonRed)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("대장 전체초기화")
+                    Text("🔓 관리자 모드 활성화됨", color = NeonAmber, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Button(
+                        onClick = { viewModel.clearLostData() },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonRed.copy(alpha = 0.15f), contentColor = NeonRed)
+                    ) {
+                        Text("대장 전체초기화")
+                    }
                 }
             }
         }

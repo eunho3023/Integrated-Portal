@@ -1437,21 +1437,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun sendChatMessage(text: String) {
+        if (text.isBlank()) return
         val currentUserName = currentUser?.displayName ?: "나"
         chatMessages.add(ChatMessage("me", currentUserName, text, System.currentTimeMillis()))
-        viewModelScope.launch {
-            // Simulate answer response
-            kotlinx.coroutines.delay(1000)
-            val peerName = activeChatPeerName ?: "상대방"
-            val responses = listOf(
-                "확인했습니다! 지금 갈게요.",
-                "네, 알겠습니다! 👍",
-                "그 건은 내일 아침 회의에서 말씀드릴게요.",
-                "대여 장부에 기록하셨나요?",
-                "감사합니다. 좋은 하루 되세요!"
-            )
-            chatMessages.add(ChatMessage("peer", peerName, responses.random(), System.currentTimeMillis()))
-        }
     }
 
     fun closeChat() {
