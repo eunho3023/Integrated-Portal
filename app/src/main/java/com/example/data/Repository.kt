@@ -75,8 +75,12 @@ class AppRepository(private val appDao: AppDao) {
         val cleanUsername = username.trim()
         if (cleanUsername.isEmpty()) return null
 
-        val local = appDao.getUserByUsername(cleanUsername)
-        if (local != null) return local
+        try {
+            val local = appDao.getUserByUsername(cleanUsername)
+            if (local != null) return local
+        } catch (e: Exception) {
+            Log.e("Repository", "Local DB error getting user by username", e)
+        }
 
         try {
             val snapshot = ref?.child("users")
@@ -88,7 +92,7 @@ class AppRepository(private val appDao: AppDao) {
                 val child = snapshot.children.firstOrNull()
                 if (child != null) {
                     val user = mapSnapshotToUser(child)
-                    appDao.insertUser(user)
+                    try { appDao.insertUser(user) } catch (_: Exception) {}
                     if (user.schoolId.isNotEmpty()) {
                         getSchoolById(user.schoolId)
                     }
@@ -105,7 +109,7 @@ class AppRepository(private val appDao: AppDao) {
                 for (child in allUsersSnapshot.children) {
                     val user = mapSnapshotToUser(child)
                     if (user.username.trim().equals(cleanUsername, ignoreCase = true)) {
-                        appDao.insertUser(user)
+                        try { appDao.insertUser(user) } catch (_: Exception) {}
                         if (user.schoolId.isNotEmpty()) {
                             getSchoolById(user.schoolId)
                         }
@@ -121,8 +125,12 @@ class AppRepository(private val appDao: AppDao) {
     }
 
     suspend fun getUserByPhoneAndName(displayName: String, phoneNumber: String): UserEntity? {
-        val local = appDao.getUserByPhoneAndName(displayName, phoneNumber)
-        if (local != null) return local
+        try {
+            val local = appDao.getUserByPhoneAndName(displayName, phoneNumber)
+            if (local != null) return local
+        } catch (e: Exception) {
+            Log.e("Repository", "Local DB error getting user by phone and name", e)
+        }
         try {
             val snapshot = ref?.child("users")
                 ?.orderByChild("displayName")

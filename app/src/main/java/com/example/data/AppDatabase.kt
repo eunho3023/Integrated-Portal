@@ -45,8 +45,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "integrated_management_db"
                 )
-                .fallbackToDestructiveMigration()
-                .fallbackToDestructiveMigrationOnDowngrade()
+                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigrationOnDowngrade(true)
+                .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                 .build()
                 INSTANCE = instance
                 instance
