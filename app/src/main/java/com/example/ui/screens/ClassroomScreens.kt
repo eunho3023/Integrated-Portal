@@ -1080,6 +1080,7 @@ fun LostTab(viewModel: MainViewModel) {
 // -----------------------------------------------------------------
 @Composable
 fun CallTab(viewModel: MainViewModel) {
+    val allUsers by viewModel.allUsers.collectAsState()
     val simulatedPresenceList = viewModel.simulatedPresenceList
     val liveStreams = viewModel.liveStreams
     val activeLiveStream = viewModel.activeLiveStream
@@ -1089,12 +1090,46 @@ fun CallTab(viewModel: MainViewModel) {
     var broadcastTitle by remember { mutableStateOf("") }
     var userSearchQuery by remember { mutableStateOf("") }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    // Combine DB registered users with simulation presence list
+    val registeredUsers = remember(allUsers) {
+        allUsers.map { user ->
+            val roleLabel = when (user.role) {
+                "teacher" -> "교사"
+                "leader" -> "실장/임원"
+                "staff" -> "학생회/부장"
+                "admin" -> "관리자"
+                else -> "학생"
+            }
+            SimulatedUser(
+                id = user.uid,
+                name = "${user.displayName} ($roleLabel)",
+                isOnline = true
+            )
+        }
+    }
+
+    val combinedPresenceList = remember(simulatedPresenceList, registeredUsers) {
+        val list = mutableListOf<SimulatedUser>()
+        list.addAll(registeredUsers)
+        simulatedPresenceList.forEach { simUser ->
+            if (list.none { it.id == simUser.id || it.name.startsWith(simUser.name) }) {
+                list.add(simUser)
+            }
+        }
+        list
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
         Text("⚡ 실시간 스마트 무전, 톡 & 라이브 채널", color = NeonPurple, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
         // ----------------- SEARCH & USER REGISTER BAR -----------------
         GlassmorphicCard(accentColor = NeonGreen) {
-            Text("👥 실시간 온라인 교실 구성원 관리 및 검색", color = SpaceText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("👥 친구, 학생, 교사 찾기", color = SpaceText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
             Text("이름을 검색하여 1:1 채팅이나 무전을 시작하거나 새로운 구성원을 추가하세요.", color = SpaceTextSoft, fontSize = 11.5.sp)
             Spacer(modifier = Modifier.height(10.dp))
@@ -1103,7 +1138,7 @@ fun CallTab(viewModel: MainViewModel) {
             OutlinedTextField(
                 value = userSearchQuery,
                 onValueChange = { userSearchQuery = it },
-                placeholder = { Text("🔍 이름으로 구성원 검색 (예: 김철수)...") },
+                placeholder = { Text("🔍 친구, 학생, 교사 이름 검색 (예: 김철수)...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (userSearchQuery.isNotEmpty()) {
@@ -1170,11 +1205,11 @@ fun CallTab(viewModel: MainViewModel) {
             }
         }
 
-        val filteredPresenceList = remember(simulatedPresenceList, userSearchQuery) {
+        val filteredPresenceList = remember(combinedPresenceList, userSearchQuery) {
             if (userSearchQuery.isBlank()) {
-                simulatedPresenceList.toList()
+                combinedPresenceList.toList()
             } else {
-                simulatedPresenceList.filter { it.name.contains(userSearchQuery.trim(), ignoreCase = true) }
+                combinedPresenceList.filter { it.name.contains(userSearchQuery.trim(), ignoreCase = true) }
             }
         }
 

@@ -521,7 +521,24 @@ fun RentalScreen(
 
                     // Add Item
                     Button(
-                        onClick = { showAddItemDialog = true },
+                        onClick = {
+                            val currentUser = viewModel.currentUser
+                            if (currentUser == null) {
+                                viewModel.showToast("⚠️ 회원가입 및 로그인한 사용자만 물품을 등록할 수 있습니다.")
+                            } else {
+                                val isAllowedRole = viewModel.isLeaderUp() || viewModel.rentAdminUnlocked ||
+                                    (currentUser.role in listOf("leader", "staff", "teacher", "admin")) ||
+                                    currentUser.displayName.contains("실장") || currentUser.displayName.contains("부장") ||
+                                    currentUser.displayName.contains("선생") || currentUser.displayName.contains("교사") ||
+                                    currentUser.displayName.contains("관리자")
+
+                                if (isAllowedRole) {
+                                    showAddItemDialog = true
+                                } else {
+                                    viewModel.showToast("⚠️ 물품 추가 권한이 없습니다. (반 실장/부실장, 학생회/부장, 교사, 관리자 전용)")
+                                }
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonPurple.copy(alpha = 0.15f), contentColor = NeonPurple),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(36.dp),
