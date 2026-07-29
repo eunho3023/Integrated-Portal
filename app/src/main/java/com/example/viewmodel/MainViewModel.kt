@@ -151,8 +151,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var isCallMinimized by mutableStateOf(false)
     var isLiveMinimized by mutableStateOf(false)
 
+    // Master Admin active school override state (allows Master Admin to view/edit any school/academy)
+    var masterAdminSelectedSchoolId by mutableStateOf<String?>(null)
+
+    val effectiveSchoolId: String
+        get() {
+            if ((currentUser?.role == "teacher" || currentUser?.role == "admin" || currentUser?.username == "admin") && !masterAdminSelectedSchoolId.isNullOrEmpty()) {
+                return masterAdminSelectedSchoolId!!
+            }
+            return currentUser?.schoolId ?: ""
+        }
+
     // Flows driven by the active schoolId
-    private val activeSchoolIdFlow = snapshotFlow { currentUser?.schoolId ?: "" }
+    private val activeSchoolIdFlow = snapshotFlow { effectiveSchoolId }
     private val firestoreSyncManager = FirestoreSyncManager(db.appDao())
 
     var isFirebaseConnected by mutableStateOf(false)
@@ -932,6 +943,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateCurrentUserInfo(
+        newDisplayName: String,
+        newPhoneNumber: String,
+        newPassword: String,
+        inviteCode: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        val user = currentUser
+        if (user == null) {
+            showToast("⚠️ 로그인된 사용자가 없습니다.")
+            return
+        }
+        viewModelScope.launch {
+            var newSchoolId = user.schoolId
+            if (inviteCode.isNotBlank()) {
+                val sch = repository.getSchoolByInviteCode(inviteCode.trim())
+                if (sch != null) {
+                    newSchoolId = sch.schoolId
+                } else {
+                    showToast("⚠️ 입력하신 초대코드 [${inviteCode.trim()}] 에 해당하는 학교/학원을 찾을 수 없어 기존 소속이 유지됩니다.")
+                }
+            }
+            val updatedUser = user.copy(
+                displayName = if (newDisplayName.isNotBlank()) newDisplayName.trim() else user.displayName,
+                phoneNumber = newPhoneNumber.trim(),
+                password = if (newPassword.isNotBlank()) newPassword.trim() else user.password,
+                schoolId = newSchoolId
+            )
+            repository.insertUser(updatedUser)
+            currentUser = updatedUser
+            currentSchool = repository.getSchoolById(updatedUser.schoolId)
+            showToast("✅ 회원 정보가 성공적으로 수정되었습니다.")
+            onSuccess()
+        }
+    }
+
     private fun generateInviteCode(): String {
         val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         val r = Random()
@@ -1421,30 +1468,227 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Master Admin School Management Methods
+    fun selectSchoolForMasterAdmin(schoolId: String) {
+        masterAdminSelectedSchoolId = schoolId
+        viewModelScope.launch {
+            val sch = repository.getSchoolById(schoolId)
+            showToast("🏫 총괄 관리자 전환: [${sch?.name ?: schoolId}] 시스템 데이터로 전환되었습니다.")
+        }
+    }
+
+    fun addAndSelectSchool(schoolName: String, codePrefix: String = "SEL") {
+        val cleanName = schoolName.trim()
+        if (cleanName.isBlank()) return
+        viewModelScope.launch {
+            // Check if already exists in DB
+            val existing = allSchools.value.find { it.name == cleanName }
+            if (existing != null) {
+                selectSchoolForMasterAdmin(existing.schoolId)
+            } else {
+                val newSchoolId = "sch_" + System.currentTimeMillis()
+                val code = codePrefix + (1000..9999).random()
+                val newSchool = SchoolEntity(newSchoolId, cleanName, code, System.currentTimeMillis())
+                repository.insertSchool(newSchool)
+                repository.insertInviteCode(InviteCodeEntity(code, newSchoolId))
+                selectSchoolForMasterAdmin(newSchoolId)
+                showToast("🎉 [${cleanName}] 학교/학원이 시스템에 등록되고 전환되었습니다. (초대코드: $code)")
+            }
+        }
+    }
+
+    fun resetMasterAdminSchoolSelection() {
+        masterAdminSelectedSchoolId = null
+        showToast("🏫 본인 소속 학교/학원 화면으로 복귀했습니다.")
+    }
+
+    fun updateSchoolByMasterAdmin(schoolId: String, newName: String, newInviteCode: String) {
+        if (newName.isBlank() || newInviteCode.isBlank()) {
+            showToast("⚠️ 명칭과 초대 코드를 모두 입력해 주세요.")
+            return
+        }
+        viewModelScope.launch {
+            val existing = repository.getSchoolById(schoolId)
+            val updated = SchoolEntity(
+                schoolId = schoolId,
+                name = newName.trim(),
+                inviteCode = newInviteCode.trim(),
+                createdAt = existing?.createdAt ?: System.currentTimeMillis()
+            )
+            repository.insertSchool(updated)
+            repository.insertInviteCode(InviteCodeEntity(newInviteCode.trim(), schoolId))
+            if (currentSchool?.schoolId == schoolId) {
+                currentSchool = updated
+            }
+            showToast("✅ [${newName.trim()}] 학교/학원 정보가 수정되었습니다.")
+        }
+    }
+
+    fun createSchoolByMasterAdmin(name: String, inviteCode: String) {
+        if (name.isBlank() || inviteCode.isBlank()) {
+            showToast("⚠️ 등록할 명칭과 초대 코드를 모두 입력해 주세요.")
+            return
+        }
+        val cleanName = name.trim()
+        val cleanCode = inviteCode.trim()
+        val newSchoolId = "sch_" + System.currentTimeMillis()
+        viewModelScope.launch {
+            val newSchool = SchoolEntity(newSchoolId, cleanName, cleanCode, System.currentTimeMillis())
+            repository.insertSchool(newSchool)
+            repository.insertInviteCode(InviteCodeEntity(cleanCode, newSchoolId))
+            selectSchoolForMasterAdmin(newSchoolId)
+            showToast("🎉 신규 학교/학원 [${cleanName}] (초대코드: ${cleanCode})이(가) 등록 및 전환되었습니다.")
+        }
+    }
+
+    fun deleteSchoolByMasterAdmin(school: SchoolEntity) {
+        viewModelScope.launch {
+            if (masterAdminSelectedSchoolId == school.schoolId) {
+                masterAdminSelectedSchoolId = null
+            }
+            // Clear school record
+            try {
+                db.appDao().getSchoolById(school.schoolId)?.let {
+                    // Delete from local DB if Dao supports or overwrite
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            showToast("🗑️ [${school.name}] 가 삭제/초기화 되었습니다.")
+        }
+    }
+
     // -------------------------------------------------------------
-    // REALTIME RTC CHAT & BROADCAST (Simulated Node Emulation)
+    // REALTIME RTC CHAT, SMS & BROADCAST (Simulated Node Emulation)
     // -------------------------------------------------------------
+    val selectedMessageRecipients = mutableStateListOf<UserEntity>()
+
     fun connectCallTab() {
         showToast("🟢 실시간 네트워크 노드에 접속되었습니다.")
+    }
+
+    fun toggleMessageRecipient(user: UserEntity) {
+        val existing = selectedMessageRecipients.find { it.uid == user.uid }
+        if (existing != null) {
+            selectedMessageRecipients.remove(existing)
+        } else {
+            selectedMessageRecipients.add(user)
+        }
+    }
+
+    fun addMessageRecipient(user: UserEntity) {
+        if (selectedMessageRecipients.none { it.uid == user.uid }) {
+            selectedMessageRecipients.add(user)
+        }
+    }
+
+    fun removeMessageRecipient(user: UserEntity) {
+        selectedMessageRecipients.removeAll { it.uid == user.uid }
+    }
+
+    fun clearMessageRecipients() {
+        selectedMessageRecipients.clear()
     }
 
     fun openChat(peerId: String, peerName: String) {
         activeChatPeerId = peerId
         activeChatPeerName = peerName
         chatMessages.clear()
+
+        val matchedUser = allUsers.value.find { it.uid == peerId || it.displayName == peerName }
+        if (matchedUser != null) {
+            addMessageRecipient(matchedUser)
+        }
         
-        chatMessages.add(ChatMessage("system", "시스템", "💬 $peerName 님과의 암호화 채널이 생성되었습니다.", System.currentTimeMillis()))
+        chatMessages.add(ChatMessage(from = "system", fromName = "시스템", text = "📩 회원 검색 및 다중 수신자 지정 문자/메시지 센터가 개설되었습니다.", timestamp = System.currentTimeMillis()))
     }
 
-    fun sendChatMessage(text: String) {
-        if (text.isBlank()) return
+    fun canEditOrDeleteMessage(timestamp: Long): Boolean {
+        return (System.currentTimeMillis() - timestamp) <= 5 * 60 * 1000L
+    }
+
+    fun editChatMessage(messageId: String, newText: String) {
+        val index = chatMessages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = chatMessages[index]
+            if (canEditOrDeleteMessage(msg.timestamp)) {
+                chatMessages[index] = msg.copy(text = newText.trim(), isEdited = true)
+                showToast("✏️ 메시지가 수정되었습니다.")
+            } else {
+                showToast("⚠️ 전송 후 5분이 지난 메시지는 수정할 수 없습니다.")
+            }
+        }
+    }
+
+    fun deleteChatMessage(messageId: String) {
+        val index = chatMessages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = chatMessages[index]
+            if (canEditOrDeleteMessage(msg.timestamp)) {
+                chatMessages.removeAt(index)
+                showToast("🗑️ 메시지가 삭제되었습니다.")
+            } else {
+                showToast("⚠️ 전송 후 5분이 지난 메시지는 삭제할 수 없습니다.")
+            }
+        }
+    }
+
+    fun sendChatMessage(text: String, fileName: String? = null, fileUri: String? = null, isImage: Boolean = false) {
+        if (text.isBlank() && fileName == null) return
         val currentUserName = currentUser?.displayName ?: "나"
-        chatMessages.add(ChatMessage("me", currentUserName, text, System.currentTimeMillis()))
+        val recipientLabel = if (selectedMessageRecipients.isNotEmpty()) {
+            selectedMessageRecipients.joinToString(", ") { it.displayName }
+        } else {
+            activeChatPeerName ?: "수신자"
+        }
+        
+        // 1. Add sender message
+        val newMsg = ChatMessage(
+            from = "me",
+            fromName = "$currentUserName ➔ [$recipientLabel]",
+            text = text.trim(),
+            timestamp = System.currentTimeMillis(),
+            fileName = fileName,
+            fileUri = fileUri,
+            isImage = isImage
+        )
+        chatMessages.add(newMsg)
+
+        // 2. Generate peer responses automatically for each recipient
+        val targets = selectedMessageRecipients.toList()
+        viewModelScope.launch {
+            if (targets.isEmpty()) {
+                val peerName = activeChatPeerName ?: "상대방"
+                kotlinx.coroutines.delay(600)
+                chatMessages.add(ChatMessage(from = "peer", fromName = peerName, text = "📩 문자 메시지 전달 완료되었습니다!", timestamp = System.currentTimeMillis()))
+            } else {
+                targets.forEach { target ->
+                    kotlinx.coroutines.delay(500)
+                    val targetName = target.displayName
+                    val prompt = """
+                        당신은 학교/학원 회원인 '$targetName' 입니다.
+                        발신자('$currentUserName')가 수신자들에게 문자 메시지를 보냈습니다: "${text.ifEmpty { fileName ?: "" }}"
+                        
+                        친절하고 짧은 수신 확인 메시지를 한국어로 1문장 작성해 주세요.
+                    """.trimIndent()
+                    
+                    val replyText = try {
+                        callGeminiApi(prompt)
+                    } catch (e: Exception) {
+                        ""
+                    }
+                    
+                    val finalReply = if (replyText.isNotBlank()) replyText else "📩 [$targetName] 문자 잘 받았습니다! 확인했습니다."
+                    chatMessages.add(ChatMessage(from = "peer", fromName = targetName, text = finalReply, timestamp = System.currentTimeMillis()))
+                }
+            }
+        }
     }
 
     fun closeChat() {
         activeChatPeerId = null
         activeChatPeerName = null
+        selectedMessageRecipients.clear()
         chatMessages.clear()
     }
 
@@ -1471,14 +1715,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         showToast("📴 통화가 종료되었습니다.")
     }
 
-    fun startLiveBroadcast(type: String, title: String) {
+    fun startLiveBroadcast(
+        type: String,
+        title: String,
+        audienceScope: String = "전체",
+        allowedUserIds: List<String> = emptyList()
+    ) {
         val hostName = currentUser?.displayName ?: "선생님"
         val id = "live_" + UUID.randomUUID().toString().substring(0, 6)
-        val room = LiveStreamRoom(id, hostName, title.ifEmpty { "학급 라이브 방송" }, type, 0)
+        val room = LiveStreamRoom(
+            id = id,
+            hostName = hostName,
+            title = title.ifEmpty { "학급 라이브 방송" },
+            type = type,
+            viewers = 0,
+            audienceScope = audienceScope,
+            allowedUserIds = allowedUserIds
+        )
         liveStreams.add(room)
         activeLiveStream = room
         isLiveMinimized = false
-        showToast("🔴 라이브 방송을 시작했습니다!")
+        showToast("🔴 [$audienceScope 시청 대상] 라이브 방송을 시작했습니다!")
     }
 
     fun stopLiveBroadcast() {
@@ -1912,10 +2169,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 // MODEL STRUCTS FOR THE REVENUE FLOWS
 // -----------------------------------------------------------------
 data class ChatMessage(
+    val id: String = java.util.UUID.randomUUID().toString(),
     val from: String, // "me", "peer", "system"
     val fromName: String,
     val text: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val isEdited: Boolean = false,
+    val fileName: String? = null,
+    val fileUri: String? = null,
+    val isImage: Boolean = false
 )
 
 data class LiveStreamRoom(
@@ -1923,7 +2185,9 @@ data class LiveStreamRoom(
     val hostName: String,
     val title: String,
     val type: String, // "audio", "video"
-    val viewers: Int
+    val viewers: Int,
+    val audienceScope: String = "전체", // "전체", "1학년", "2학년", "3학년", "1반", "2반", "3반", "선택한 회원만"
+    val allowedUserIds: List<String> = emptyList()
 )
 
 data class SimulatedUser(

@@ -201,7 +201,7 @@ interface AppDao {
     suspend fun deleteWrongAnswer(item: WrongAnswerEntity)
 
     // Questions (Q&A 서비스)
-    @Query("SELECT * FROM questions WHERE schoolId = :schoolId ORDER BY date DESC")
+    @Query("SELECT * FROM questions WHERE isPublic = 1 OR schoolId = :schoolId ORDER BY date DESC")
     fun getQuestionsFlow(schoolId: String): Flow<List<QuestionEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

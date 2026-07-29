@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -1067,15 +1069,19 @@ fun CallTab(viewModel: MainViewModel) {
 
     var broadcastTitle by remember { mutableStateOf("") }
     var userSearchQuery by remember { mutableStateOf("") }
+    var selectedAudienceScope by remember { mutableStateOf("전체") }
+    val selectedLiveViewers = remember { mutableStateListOf<UserEntity>() }
+
+    val audienceOptions = listOf("전체", "1학년", "2학년", "3학년", "1반", "2반", "3반", "선택한 회원만")
 
     // Combine DB registered users with simulation presence list
     val registeredUsers = remember(allUsers) {
         allUsers.map { user ->
-            val roleLabel = when (user.role) {
-                "teacher" -> "교사"
-                "leader" -> "실장/임원"
-                "staff" -> "학생회/부장"
-                "admin" -> "관리자"
+            val roleLabel = when {
+                user.username == "admin" || user.role == "admin" -> "관리자"
+                user.role == "teacher" -> "교사"
+                user.role == "leader" -> "실장/임원"
+                user.role == "staff" -> "학생회/부장"
                 else -> "학생"
             }
             SimulatedUser(
@@ -1103,20 +1109,20 @@ fun CallTab(viewModel: MainViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("⚡ 실시간 스마트 무전, 톡 & 라이브 채널", color = NeonPurple, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text("⚡ 실시간 통화, 라이브 방송 & 톡 채널", color = NeonPurple, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
         // ----------------- SEARCH & USER REGISTER BAR -----------------
         GlassmorphicCard(accentColor = NeonGreen) {
-            Text("👥 친구, 학생, 교사 찾기", color = SpaceText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("👥 회원가입 된 구성원 검색 및 전화/문자 연결", color = SpaceText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("이름을 검색하여 1:1 채팅이나 무전을 시작하거나 새로운 구성원을 추가하세요.", color = SpaceTextSoft, fontSize = 11.5.sp)
+            Text("앱 내 가입된 회원을 검색하여 1:1 대화, 통화 수신자 지정 또는 신규 구성원을 추가하세요.", color = SpaceTextSoft, fontSize = 11.5.sp)
             Spacer(modifier = Modifier.height(10.dp))
 
             // 🔍 이름 검색창
             OutlinedTextField(
                 value = userSearchQuery,
                 onValueChange = { userSearchQuery = it },
-                placeholder = { Text("🔍 친구, 학생, 교사 이름 검색 (예: 김철수)...") },
+                placeholder = { Text("🔍 회원 이름, 역할 검색 (예: 김철수, 교사)...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (userSearchQuery.isNotEmpty()) {
@@ -1200,7 +1206,7 @@ fun CallTab(viewModel: MainViewModel) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Call, contentDescription = null, tint = NeonPurple, modifier = Modifier.size(20.dp))
-                    Text("📞 음성 및 영상 무전통화 채널", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("📞 음성 및 영상 통화 채널", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(
                     modifier = Modifier
@@ -1219,20 +1225,20 @@ fun CallTab(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(6.dp))
 
             if (!viewModel.isCallConnected) {
-                Text("실시간 단체 무전통화 및 암호화 영상회의 채널을 개설하고 기기를 연결합니다.", color = SpaceTextSoft, fontSize = 12.sp)
+                Text("실시간 단체 통화 및 암호화 영상회의 채널을 개설하고 기기를 연결합니다.", color = SpaceTextSoft, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
                         viewModel.isCallConnected = true
-                        viewModel.showToast("📞 무전통화 채널에 연결되었습니다.")
+                        viewModel.showToast("📞 통화 채널에 연결되었습니다.")
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = NeonPurple),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("무전 채널 연결", fontWeight = FontWeight.Bold)
+                    Text("통화 채널 연결", fontWeight = FontWeight.Bold)
                 }
             } else {
-                Text("무전 통화할 상대를 선택하거나 클릭하여 1:1 대화를 나누세요.", color = SpaceTextSoft, fontSize = 11.5.sp)
+                Text("통화할 상대를 선택하거나 클릭하여 1:1 대화를 나누세요.", color = SpaceTextSoft, fontSize = 11.5.sp)
                 Spacer(modifier = Modifier.height(10.dp))
 
                 if (filteredPresenceList.isEmpty()) {
@@ -1318,7 +1324,7 @@ fun CallTab(viewModel: MainViewModel) {
                         ) {
                             Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("무전통화 ($checkedCount)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("음성통화 ($checkedCount)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -1330,7 +1336,7 @@ fun CallTab(viewModel: MainViewModel) {
                         ) {
                             Icon(Icons.Default.VideoCall, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("영상회의 ($checkedCount)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("영상통화 ($checkedCount)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1339,7 +1345,7 @@ fun CallTab(viewModel: MainViewModel) {
                 TextButton(
                     onClick = {
                         viewModel.isCallConnected = false
-                        viewModel.showToast("📞 무전 채널 연결을 끊었습니다.")
+                        viewModel.showToast("📞 통화 채널 연결을 끊었습니다.")
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {
@@ -1357,7 +1363,7 @@ fun CallTab(viewModel: MainViewModel) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.ChatBubble, contentDescription = null, tint = NeonAmber, modifier = Modifier.size(20.dp))
-                    Text("💬 1:1 실시간 암호화 톡 채널", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("💬 1:1 및 다중 수신자 문자/톡 채널", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(
                     modifier = Modifier
@@ -1376,7 +1382,7 @@ fun CallTab(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(6.dp))
 
             if (!viewModel.isChatConnected) {
-                Text("실시간 1:1 텍스트 메시지 및 업무 소통 채널에 연결합니다.", color = SpaceTextSoft, fontSize = 12.sp)
+                Text("실시간 1:1 및 그룹 텍스트/이미지/파일 메시지 소통 채널에 연결합니다.", color = SpaceTextSoft, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
@@ -1461,7 +1467,7 @@ fun CallTab(viewModel: MainViewModel) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Tv, contentDescription = null, tint = NeonRed, modifier = Modifier.size(20.dp))
-                    Text("📺 실시간 라이브 방송 채널 (1:N)", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("📺 실시간 라이브 방송 채널 (시청 대상 선택)", color = SpaceText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(
                     modifier = Modifier
@@ -1511,10 +1517,79 @@ fun CallTab(viewModel: MainViewModel) {
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
+                // 🎯 시청 권한 대상 선택창 (전체 / 반 / 학년 / 선택한 사람)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(PanelSolid)
+                        .border(1.dp, NeonRed.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                        .padding(10.dp)
+                ) {
+                    Text("🎯 라이브 시청 대상 선택:", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items(audienceOptions) { option ->
+                            val isSelected = selectedAudienceScope == option
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedAudienceScope = option },
+                                label = { Text(option, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = NeonRed,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = PanelGlass,
+                                    labelColor = SpaceText
+                                )
+                            )
+                        }
+                    }
+
+                    // If "선택한 회원만" selected, show registered members multi-select chips
+                    if (selectedAudienceScope == "선택한 회원만") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("👤 시청 허가할 회원 선택 (${selectedLiveViewers.size}명 지정됨):", color = SpaceText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            items(allUsers) { user ->
+                                val isChosen = selectedLiveViewers.any { it.uid == user.uid }
+                                FilterChip(
+                                    selected = isChosen,
+                                    onClick = {
+                                        if (isChosen) {
+                                            selectedLiveViewers.removeAll { it.uid == user.uid }
+                                        } else {
+                                            selectedLiveViewers.add(user)
+                                        }
+                                    },
+                                    label = { Text("${user.displayName}${if (isChosen) " ✓" else ""}", fontSize = 10.5.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = NeonGreen,
+                                        selectedLabelColor = Color.Black,
+                                        containerColor = PanelGlass,
+                                        labelColor = SpaceText
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
                         onClick = {
-                            viewModel.startLiveBroadcast("audio", broadcastTitle)
+                            val allowedIds = selectedLiveViewers.map { it.uid }
+                            viewModel.startLiveBroadcast("audio", broadcastTitle, selectedAudienceScope, allowedIds)
                             broadcastTitle = ""
                             keyboardController?.hide()
                             focusManager.clearFocus()
@@ -1528,7 +1603,8 @@ fun CallTab(viewModel: MainViewModel) {
                     }
                     Button(
                         onClick = {
-                            viewModel.startLiveBroadcast("video", broadcastTitle)
+                            val allowedIds = selectedLiveViewers.map { it.uid }
+                            viewModel.startLiveBroadcast("video", broadcastTitle, selectedAudienceScope, allowedIds)
                             broadcastTitle = ""
                             keyboardController?.hide()
                             focusManager.clearFocus()
@@ -1564,7 +1640,7 @@ fun CallTab(viewModel: MainViewModel) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("🔴 LIVE: ${room.title}", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text("송출: ${room.hostName} · 형식: ${if (room.type == "video") "화상 비디오" else "음성 라디오"}", color = SpaceTextSoft, fontSize = 11.sp)
+                                Text("송출: ${room.hostName} · [시청대상: ${room.audienceScope}] · 형식: ${if (room.type == "video") "화상 비디오" else "음성 라디오"}", color = SpaceTextSoft, fontSize = 11.sp)
                             }
                             Button(
                                 onClick = { viewModel.watchLiveStream(room) },

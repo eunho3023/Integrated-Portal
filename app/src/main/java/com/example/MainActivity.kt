@@ -11,6 +11,11 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -66,6 +71,7 @@ fun AppScaffold() {
     val currentSchool = viewModel.currentSchool
     var isWithdrawDialogVisible by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
     var showExitAppDialog by remember { mutableStateOf(false) }
     var showApkDownloadInfoDialog by remember { mutableStateOf(false) }
 
@@ -115,46 +121,6 @@ fun AppScaffold() {
         )
     }
 
-    if (showApkDownloadInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showApkDownloadInfoDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.GetApp, contentDescription = null, tint = NeonCyan)
-                    Text("📲 APK 파일 및 프로젝트 내보내기", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Google AI Studio 플랫폼의 우측 상단 메뉴를 이용해 APK 파일 및 프로젝트 전체 코드를 받아 스마트폰에 직접 설치할 수 있습니다:", color = SpaceText, fontSize = 13.sp)
-                    
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = PanelSolid,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.3f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("1️⃣ AI Studio 화면 우측 상단의 [Export] 또는 [Settings (⚙️)] 메뉴 클릭", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text("2️⃣ [Download APK] 또는 [Export ZIP] 버튼 클릭하여 파일 저장", color = SpaceText, fontSize = 12.sp)
-                            Text("3️⃣ 스마트폰(Android)에서 다운로드한 .apk 파일 실행 후 설치하여 앱 사용", color = SpaceText, fontSize = 12.sp)
-                        }
-                    }
-
-                    Text("💡 소스코드가 포함된 ZIP 압축 파일을 내려받아 Android Studio에서 직접 APK로 컴파일할 수도 있습니다.", color = SpaceTextSoft, fontSize = 11.sp)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showApkDownloadInfoDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black)
-                ) {
-                    Text("확인", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
     val tabs = listOf(
         "home-tab" to "🏠 홈",
         "vulnerability-tab" to "🤖 AI 오답노트 & 취약점 분석",
@@ -170,7 +136,7 @@ fun AppScaffold() {
         "vote-tab" to "🗳️ 투표 안건",
         "seat-tab" to "🪑 자리 배치",
         "lost-tab" to "🔍 분실물 보관",
-        "call-tab" to "📞 실시간 무전"
+        "call-tab" to "📞 통화, 라이브 & 문자"
     )
 
     ModalNavigationDrawer(
@@ -246,23 +212,6 @@ fun AppScaffold() {
                                 ),
                                 shape = RoundedCornerShape(8.dp)
                             )
-                        }
-
-                        HorizontalDivider(color = Color(0x228CAEC6), modifier = Modifier.padding(vertical = 4.dp))
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch { drawerState.close() }
-                                showApkDownloadInfoDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f), contentColor = NeonCyan),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(Icons.Default.GetApp, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Text("📲 APK 다운로드 방법 안내", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
                         }
                     }
                 }
@@ -346,24 +295,6 @@ fun AppScaffold() {
                             ) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu Drawer", modifier = Modifier.size(16.dp))
                                 Text("메뉴", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        // Top Header APK Download Button
-                        Button(
-                            onClick = { showApkDownloadInfoDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = NeonGreen.copy(alpha = 0.2f), contentColor = NeonGreen),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(Icons.Default.GetApp, contentDescription = "Download APK", modifier = Modifier.size(16.dp))
-                                Text("📲 APK", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -453,10 +384,11 @@ fun AppScaffold() {
                         Text("로그인 / 가입", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
-                    val roleLabelText = when (currentUser.role) {
-                        "teacher" -> "교사(관리자)"
-                        "staff" -> "학생회/부장"
-                        "leader" -> "반 실장"
+                    val roleLabelText = when {
+                        currentUser.username == "admin" || currentUser.role == "admin" -> "👑 총괄 관리자"
+                        currentUser.role == "teacher" -> "교사(관리자)"
+                        currentUser.role == "staff" -> "학생회/부장"
+                        currentUser.role == "leader" -> "반 실장"
                         else -> "학생"
                     }
                     Column(
@@ -483,11 +415,20 @@ fun AppScaffold() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(
+                            onClick = { showEditProfileDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f), contentColor = NeonCyan),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.height(30.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text("✏️ 정보수정", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
                             onClick = { showLogoutConfirmDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f), contentColor = SpaceText),
                             shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.height(30.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
                             Text("로그아웃", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -496,7 +437,7 @@ fun AppScaffold() {
                             colors = ButtonDefaults.buttonColors(containerColor = NeonRed.copy(alpha = 0.15f), contentColor = NeonRed),
                             shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.height(30.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
                             Text("회원탈퇴", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -641,6 +582,13 @@ fun AppScaffold() {
 
         if (viewModel.isAuthModalVisible) {
             AuthModalDialog(viewModel = viewModel)
+        }
+
+        if (showEditProfileDialog && currentUser != null) {
+            EditProfileModalDialog(
+                viewModel = viewModel,
+                onDismiss = { showEditProfileDialog = false }
+            )
         }
 
         if (showLogoutConfirmDialog) {
@@ -981,6 +929,8 @@ fun SimulatedBroadcastOverlay(viewModel: MainViewModel) {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(activeStream.title, color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("[시청대상: ${activeStream.audienceScope}]", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 Text("👀 시청자 ${activeStream.viewers}명", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1015,31 +965,64 @@ fun SimulatedBroadcastOverlay(viewModel: MainViewModel) {
 }
 
 // -----------------------------------------------------------------
-// PEER CHAT POPUP WINDOW PANEL
+// PEER CHAT & MULTI-RECIPIENT SMS POPUP WINDOW PANEL
 // -----------------------------------------------------------------
 @Composable
 fun SimulatedChatDialog(viewModel: MainViewModel) {
-    val peerName = viewModel.activeChatPeerName ?: "상대방"
     val messages = viewModel.chatMessages
+    val allUsersList by viewModel.allUsers.collectAsStateWithLifecycle()
+    val selectedRecipients = viewModel.selectedMessageRecipients
+    var memberSearchQuery by remember { mutableStateOf("") }
     var chatText by remember { mutableStateOf("") }
+
+    // Attachment state
+    var pendingAttachmentName by remember { mutableStateOf<String?>(null) }
+    var pendingAttachmentIsImage by remember { mutableStateOf(false) }
+
+    // Message Edit State
+    var editingMessageId by remember { mutableStateOf<String?>(null) }
+    var editingMessageText by remember { mutableStateOf("") }
+
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom on new message
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    // Filter members matching search query
+    val matchedMembers = remember(allUsersList, memberSearchQuery) {
+        if (memberSearchQuery.isBlank()) {
+            allUsersList.take(10)
+        } else {
+            allUsersList.filter {
+                it.displayName.contains(memberSearchQuery, ignoreCase = true) ||
+                it.username.contains(memberSearchQuery, ignoreCase = true) ||
+                it.phoneNumber.contains(memberSearchQuery, ignoreCase = true) ||
+                it.role.contains(memberSearchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(Color.Black.copy(alpha = 0.65f))
             .clickable { viewModel.closeChat() },
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
-                .width(340.dp)
-                .height(440.dp)
-                .clickable { /* stop bubble */ }
-                .border(1.dp, NeonCyan.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.88f)
+                .clickable { /* prevent closing when clicking inside card */ }
+                .border(1.dp, NeonCyan.copy(alpha = 0.45f), RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = PanelSolid),
-            shape = RoundedCornerShape(14.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -1047,38 +1030,184 @@ fun SimulatedChatDialog(viewModel: MainViewModel) {
                     .padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(NeonGreen)
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonGreen)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "📩 회원 검색 & 문자/메시지 센터",
+                                color = SpaceText,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.5.sp
+                            )
+                        }
+                        Text(
+                            text = "가입된 회원을 검색해 1:1 또는 그룹 대화를 나누고 5분 내 수정/삭제 및 파일 전송을 하세요",
+                            color = SpaceTextSoft,
+                            fontSize = 10.5.sp
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("💬 $peerName 님과의 대화", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                     }
-                    IconButton(onClick = { viewModel.closeChat() }, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = null, tint = SpaceTextSoft)
+                    IconButton(onClick = { viewModel.closeChat() }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = SpaceTextSoft)
                     }
                 }
 
-                HorizontalDivider(color = Color(0x118CAEC6), modifier = Modifier.padding(vertical = 6.dp))
+                HorizontalDivider(color = Color(0x228CAEC6), modifier = Modifier.padding(vertical = 4.dp))
 
+                // Member Search & Multi-Selection Section
                 Column(
                     modifier = Modifier
-                        .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.03f))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                        .padding(8.dp)
                 ) {
-                    messages.forEach { msg ->
+                    OutlinedTextField(
+                        value = memberSearchQuery,
+                        onValueChange = { memberSearchQuery = it },
+                        placeholder = { Text("🔍 회원가입 한 사람 이름/아이디/전화번호 검색...", fontSize = 11.5.sp) },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp)) },
+                        trailingIcon = {
+                            if (memberSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { memberSearchQuery = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = null, tint = SpaceTextSoft, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedTextColor = SpaceText,
+                            unfocusedTextColor = SpaceText
+                        ),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Member Search Results List (Chips)
+                    if (matchedMembers.isEmpty()) {
+                        Text(
+                            text = "🔍 검색 결과가 없습니다.",
+                            color = SpaceTextSoft,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    } else {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(matchedMembers, key = { it.uid }) { user ->
+                                val isSelected = selectedRecipients.any { it.uid == user.uid }
+                                val roleText = when (user.role) {
+                                    "teacher" -> "교사"
+                                    "staff" -> "학생회"
+                                    "leader" -> "실장"
+                                    "admin" -> "관리자"
+                                    else -> "학생"
+                                }
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.toggleMessageRecipient(user) },
+                                    label = {
+                                        Text(
+                                            text = "${user.displayName} ($roleText)${if (isSelected) " ✓" else ""}",
+                                            fontSize = 10.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = NeonCyan,
+                                        selectedLabelColor = Color.Black,
+                                        containerColor = PanelGlass,
+                                        labelColor = SpaceText
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Selected Recipients Bar
+                    if (selectedRecipients.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🎯 대화 대상 (총 ${selectedRecipients.size}명 지정):",
+                                color = NeonCyan,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "전체 해제 ✕",
+                                color = NeonRed,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable { viewModel.clearMessageRecipients() }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            selectedRecipients.forEach { target ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = NeonCyan.copy(alpha = 0.2f),
+                                    border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                                    modifier = Modifier.clickable { viewModel.removeMessageRecipient(target) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(target.displayName, color = NeonCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Default.Close, contentDescription = "삭제", tint = NeonCyan, modifier = Modifier.size(11.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Message Log List
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(messages) { msg ->
                         val isMe = msg.from == "me"
                         val isSys = msg.from == "system"
+                        val canEditOrDelete = isMe && viewModel.canEditOrDeleteMessage(msg.timestamp)
 
                         if (isSys) {
                             Text(
@@ -1086,7 +1215,9 @@ fun SimulatedChatDialog(viewModel: MainViewModel) {
                                 color = SpaceTextSoft,
                                 fontSize = 11.sp,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
                             )
                         } else {
                             Row(
@@ -1095,18 +1226,104 @@ fun SimulatedChatDialog(viewModel: MainViewModel) {
                             ) {
                                 Card(
                                     modifier = Modifier
-                                        .widthIn(max = 220.dp)
+                                        .widthIn(max = 290.dp)
                                         .border(
                                             1.dp,
-                                            if (isMe) NeonCyan.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f),
-                                            RoundedCornerShape(8.dp)
+                                            if (isMe) NeonCyan.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.15f),
+                                            RoundedCornerShape(12.dp)
                                         ),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (isMe) NeonCyan.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.02f)
-                                    )
+                                        containerColor = if (isMe) NeonCyan.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(8.dp)) {
-                                        Text(msg.text, color = SpaceText, fontSize = 12.sp)
+                                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (isMe) "📤 ${msg.fromName}" else "📩 ${msg.fromName}",
+                                                color = if (isMe) NeonCyan else NeonAmber,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            if (msg.isEdited) {
+                                                Text("(수정됨)", color = SpaceTextSoft, fontSize = 9.sp)
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+
+                                        // Attachment view if exists
+                                        if (msg.fileName != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color.Black.copy(alpha = 0.3f),
+                                                border = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.4f)),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Icon(
+                                                        if (msg.isImage) Icons.Default.Image else Icons.Default.AttachFile,
+                                                        contentDescription = null,
+                                                        tint = NeonGreen,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    Column {
+                                                        Text(msg.fileName, color = NeonGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                        Text(if (msg.isImage) "📷 첨부 이미지 파일" else "📄 첨부 문서 파일", color = SpaceTextSoft, fontSize = 9.5.sp)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (msg.text.isNotEmpty()) {
+                                            Text(
+                                                text = msg.text,
+                                                color = SpaceText,
+                                                fontSize = 12.5.sp,
+                                                lineHeight = 17.sp,
+                                                softWrap = true
+                                            )
+                                        }
+
+                                        // Edit & Delete Action Buttons (within 5 minutes)
+                                        if (canEditOrDelete) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.align(Alignment.End)
+                                            ) {
+                                                Text(
+                                                    text = "✏️ 수정",
+                                                    color = NeonCyan,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.clickable {
+                                                        editingMessageId = msg.id
+                                                        editingMessageText = msg.text
+                                                    }
+                                                )
+                                                Text(
+                                                    text = "🗑️ 삭제",
+                                                    color = NeonRed,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.clickable {
+                                                        viewModel.deleteChatMessage(msg.id)
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1114,35 +1331,306 @@ fun SimulatedChatDialog(viewModel: MainViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // Pending Attachment Indicator Bar
+                if (pendingAttachmentName != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = NeonGreen.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(if (pendingAttachmentIsImage) Icons.Default.Image else Icons.Default.AttachFile, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(16.dp))
+                                Text("📎 첨부예정: ${pendingAttachmentName}", color = NeonGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            IconButton(onClick = { pendingAttachmentName = null }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "취소", tint = NeonRed)
+                            }
+                        }
+                    }
+                }
 
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Input Bar with Image & File Attachment Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Attachment options: Image / File
+                    IconButton(
+                        onClick = {
+                            pendingAttachmentName = "사진_수업자료_${System.currentTimeMillis() % 1000}.png"
+                            pendingAttachmentIsImage = true
+                            viewModel.showToast("📷 이미지가 전송 첨부 파일에 선택되었습니다.")
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.Image, contentDescription = "사진 첨부", tint = NeonGreen)
+                    }
+
+                    IconButton(
+                        onClick = {
+                            pendingAttachmentName = "과제제출_문서_${System.currentTimeMillis() % 1000}.pdf"
+                            pendingAttachmentIsImage = false
+                            viewModel.showToast("📄 파일 문서가 전송 첨부 파일에 선택되었습니다.")
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "파일 첨부", tint = NeonCyan)
+                    }
+
                     OutlinedTextField(
                         value = chatText,
                         onValueChange = { chatText = it },
-                        placeholder = { Text("메시지를 입력하세요...") },
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.5.sp),
-                        modifier = Modifier.weight(1f).height(46.dp)
+                        placeholder = { Text("문자/메시지 입력...", fontSize = 12.sp) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedTextColor = SpaceText,
+                            unfocusedTextColor = SpaceText
+                        ),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.5.sp, lineHeight = 17.sp),
+                        maxLines = 2,
+                        singleLine = false,
+                        modifier = Modifier.weight(1f)
                     )
 
                     Button(
                         onClick = {
-                            if (chatText.trim().isEmpty()) return@Button
-                            viewModel.sendChatMessage(chatText.trim())
+                            if (chatText.trim().isEmpty() && pendingAttachmentName == null) return@Button
+                            viewModel.sendChatMessage(
+                                text = chatText.trim(),
+                                fileName = pendingAttachmentName,
+                                isImage = pendingAttachmentIsImage
+                            )
                             chatText = ""
+                            pendingAttachmentName = null
                             keyboardController?.hide()
                             focusManager.clearFocus()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.height(46.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(44.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Text("전송", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(
+                            text = if (selectedRecipients.size > 1) "📤 다중전송" else "📤 전송",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // ✏️ Message Edit Dialog (within 5 minutes)
+        if (editingMessageId != null) {
+            AlertDialog(
+                onDismissRequest = { editingMessageId = null },
+                title = { Text("✏️ 메시지 내용 수정 (5분 이내)", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+                text = {
+                    Column {
+                        Text("전송 후 5분 이내의 메시지만 수정할 수 있습니다.", color = SpaceTextSoft, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = editingMessageText,
+                            onValueChange = { editingMessageText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = false,
+                            maxLines = 3,
+                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = SpaceText, unfocusedTextColor = SpaceText)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            editingMessageId?.let { id ->
+                                viewModel.editChatMessage(id, editingMessageText)
+                            }
+                            editingMessageId = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black)
+                    ) {
+                        Text("수정 완료", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { editingMessageId = null }) {
+                        Text("취소", color = SpaceTextSoft)
+                    }
+                }
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------
+// EDIT PROFILE MODAL DIALOG
+// -----------------------------------------------------------------
+@Composable
+fun EditProfileModalDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    val currentUser = viewModel.currentUser ?: return
+    val currentSchool = viewModel.currentSchool
+
+    var displayNameText by remember { mutableStateOf(currentUser.displayName) }
+    var phoneNumberText by remember { mutableStateOf(currentUser.phoneNumber) }
+    var passwordText by remember { mutableStateOf(currentUser.password) }
+    var inviteCodeText by remember { mutableStateOf(currentSchool?.inviteCode ?: "") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
+                .clickable { /* prevent closing when clicking inside */ }
+                .border(1.dp, NeonCyan.copy(alpha = 0.45f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = PanelSolid),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(22.dp))
+                        Text("✏️ 회원 로그인 정보 수정", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = SpaceTextSoft)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0x228CAEC6))
+
+                // Username (Read only)
+                OutlinedTextField(
+                    value = currentUser.username,
+                    onValueChange = {},
+                    enabled = false,
+                    label = { Text("아이디 (변경 불가)", fontSize = 11.5.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        disabledContainerColor = Color.White.copy(alpha = 0.03f),
+                        disabledTextColor = SpaceTextSoft,
+                        disabledLabelColor = SpaceTextSoft
+                    )
+                )
+
+                // Display Name
+                OutlinedTextField(
+                    value = displayNameText,
+                    onValueChange = { displayNameText = it },
+                    label = { Text("이름 / 닉네임", fontSize = 11.5.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = SpaceText,
+                        unfocusedTextColor = SpaceText
+                    )
+                )
+
+                // Phone Number
+                OutlinedTextField(
+                    value = phoneNumberText,
+                    onValueChange = { phoneNumberText = it },
+                    label = { Text("전화번호 (휴대폰 번호)", fontSize = 11.5.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = SpaceText,
+                        unfocusedTextColor = SpaceText
+                    )
+                )
+
+                // Password / PIN
+                OutlinedTextField(
+                    value = passwordText,
+                    onValueChange = { passwordText = it },
+                    label = { Text("비밀번호 / PIN 번호", fontSize = 11.5.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = SpaceText,
+                        unfocusedTextColor = SpaceText
+                    )
+                )
+
+                // School Invite Code
+                OutlinedTextField(
+                    value = inviteCodeText,
+                    onValueChange = { inviteCodeText = it },
+                    label = { Text("소속 학교/학원 초대코드 (선택)", fontSize = 11.5.sp) },
+                    placeholder = { Text("초대코드 입력 시 해당 학교로 소속 전환", fontSize = 11.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = SpaceText,
+                        unfocusedTextColor = SpaceText
+                    )
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f), contentColor = SpaceText),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("취소")
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.updateCurrentUserInfo(
+                                newDisplayName = displayNameText,
+                                newPhoneNumber = phoneNumberText,
+                                newPassword = passwordText,
+                                inviteCode = inviteCodeText,
+                                onSuccess = onDismiss
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("💾 저장하기", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1942,6 +2430,575 @@ fun AuthModalDialog(viewModel: MainViewModel) {
 }
 
 // -----------------------------------------------------------------
+// MASTER ADMIN SCHOOL & ACADEMY CONTROL PANEL
+// -----------------------------------------------------------------
+@Composable
+fun MasterAdminSchoolControlPanel(viewModel: MainViewModel) {
+    val allSchools by viewModel.allSchools.collectAsState()
+    val activeSchoolId = viewModel.effectiveSchoolId
+    val isOverridden = viewModel.masterAdminSelectedSchoolId != null
+    
+    val currentActiveSchool = remember(allSchools, activeSchoolId) {
+        allSchools.find { it.schoolId == activeSchoolId } ?: viewModel.currentSchool
+    }
+
+    var showSchoolPickerModal by remember { mutableStateOf(false) }
+    var showEditSchoolModal by remember { mutableStateOf(false) }
+    var showCreateSchoolModal by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, NeonAmber.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = PanelSolid),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("👑", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "총괄 관리자: 학교/학원 개별 제어 센터",
+                        color = NeonAmber,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (isOverridden) {
+                    Surface(
+                        color = NeonMagenta.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, NeonMagenta)
+                    ) {
+                        Text(
+                            text = "개별 선택 작동 중",
+                            color = NeonMagenta,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = Color(0x228CAEC6))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(NeonCyan.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                    .border(1.dp, NeonCyan.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("현재 관람 및 편집 중인 소속:", color = SpaceTextSoft, fontSize = 11.sp)
+                    Text(
+                        text = currentActiveSchool?.name ?: "지정된 소속 없음",
+                        color = SpaceText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "초대코드: ${currentActiveSchool?.inviteCode ?: "-"} | ID: ${currentActiveSchool?.schoolId ?: "-"}",
+                        color = NeonCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Button(
+                    onClick = { showSchoolPickerModal = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    Text("🏫 소속 전환", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = { showEditSchoolModal = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, NeonAmber),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    Text("✏️ 정보 수정", color = NeonAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = { showCreateSchoolModal = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = Color.Black),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    Text("➕ 신규 등록", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (isOverridden) {
+                TextButton(
+                    onClick = { viewModel.resetMasterAdminSchoolSelection() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("↺ 본인 소속 학교/학원으로 원복", color = SpaceTextSoft, fontSize = 11.5.sp)
+                }
+            }
+        }
+    }
+
+    if (showSchoolPickerModal) {
+        MasterAdminSchoolPickerModal(
+            viewModel = viewModel,
+            allSchools = allSchools,
+            activeSchoolId = activeSchoolId,
+            onSelectSchool = { school ->
+                viewModel.selectSchoolForMasterAdmin(school.schoolId)
+                showSchoolPickerModal = false
+            },
+            onDismiss = { showSchoolPickerModal = false }
+        )
+    }
+
+    if (showEditSchoolModal && currentActiveSchool != null) {
+        MasterAdminEditSchoolModal(
+            school = currentActiveSchool,
+            onSave = { newName, newCode ->
+                viewModel.updateSchoolByMasterAdmin(currentActiveSchool.schoolId, newName, newCode)
+                showEditSchoolModal = false
+            },
+            onDismiss = { showEditSchoolModal = false }
+        )
+    }
+
+    if (showCreateSchoolModal) {
+        MasterAdminCreateSchoolModal(
+            onCreate = { name, code ->
+                viewModel.createSchoolByMasterAdmin(name, code)
+                showCreateSchoolModal = false
+            },
+            onDismiss = { showCreateSchoolModal = false }
+        )
+    }
+}
+
+@Composable
+fun MasterAdminSchoolPickerModal(
+    viewModel: MainViewModel,
+    allSchools: List<com.example.data.SchoolEntity>,
+    activeSchoolId: String,
+    onSelectSchool: (com.example.data.SchoolEntity) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedRegion by remember { mutableStateOf("전체") }
+    var selectedType by remember { mutableStateOf("전체") }
+
+    val regions = listOf("전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주")
+    val types = listOf("전체", "고등학교", "중학교", "초등학교", "학원")
+
+    val officeFullName = remember(selectedRegion) {
+        when (selectedRegion) {
+            "서울" -> "서울특별시교육청"
+            "부산" -> "부산광역시교육청"
+            "대구" -> "대구광역시교육청"
+            "인천" -> "인천광역시교육청"
+            "광주" -> "광주광역시교육청"
+            "대전" -> "대전광역시교육청"
+            "울산" -> "울산광역시교육청"
+            "세종" -> "세종특별자치시교육청"
+            "경기" -> "경기도교육청"
+            "강원" -> "강원특별자치도교육청"
+            "충북" -> "충청북도교육청"
+            "충남" -> "충청남도교육청"
+            "전북" -> "전북특별자치도교육청"
+            "전남" -> "전라남도교육청"
+            "경북" -> "경상북도교육청"
+            "경남" -> "경상남도교육청"
+            "제주" -> "제주특별자치도교육청"
+            else -> "전체"
+        }
+    }
+
+    // Trigger NEIS API search when search query or filters change
+    LaunchedEffect(searchQuery, selectedRegion, selectedType) {
+        if (searchQuery.trim().length >= 2 || selectedRegion != "전체" || selectedType != "전체") {
+            viewModel.searchSchoolsFromNeis(
+                query = searchQuery,
+                officeName = officeFullName,
+                schoolType = selectedType
+            )
+        }
+    }
+
+    val filtered = remember(allSchools, searchQuery, selectedRegion, selectedType) {
+        allSchools.filter { school ->
+            val matchQuery = searchQuery.isBlank() || school.name.contains(searchQuery, ignoreCase = true) || school.inviteCode.contains(searchQuery, ignoreCase = true)
+            val matchRegion = selectedRegion == "전체" || school.name.contains(selectedRegion)
+            val matchType = selectedType == "전체" || (if (selectedType == "학원") school.name.contains("학원") else school.name.contains(selectedType))
+            matchQuery && matchRegion && matchType
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.85f)
+                .clickable { /* stop propagation */ }
+                .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = PanelSolid),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("🏫 전국 학교 & 학원 전환 (총 ${allSchools.size}개 등록)", color = SpaceText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("검색어를 입력하면 교육청 NEIS API에서 실시간 조회됩니다", color = SpaceTextSoft, fontSize = 10.5.sp)
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = SpaceTextSoft)
+                    }
+                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("전국 학교/학원명 검색 (예: 서울고, 대성학원)...", fontSize = 12.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = NeonCyan) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = null, tint = SpaceTextSoft)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = SpaceText,
+                        unfocusedTextColor = SpaceText
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (searchQuery.trim().isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            viewModel.addAndSelectSchool(searchQuery.trim())
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        Text("➕ '${searchQuery.trim()}' (으)로 즉시 신규 등록 & 소속 전환", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Region filter chips
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    regions.forEach { reg ->
+                        val selected = selectedRegion == reg
+                        FilterChip(
+                            selected = selected,
+                            onClick = { selectedRegion = reg },
+                            label = { Text(reg, fontSize = 10.5.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonCyan,
+                                selectedLabelColor = Color.Black,
+                                containerColor = PanelGlass,
+                                labelColor = SpaceText
+                            )
+                        )
+                    }
+                }
+
+                // Type filter chips
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    types.forEach { typ ->
+                        val selected = selectedType == typ
+                        FilterChip(
+                            selected = selected,
+                            onClick = { selectedType = typ },
+                            label = { Text(typ, fontSize = 10.5.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = if (typ == "학원") NeonAmber else NeonGreen,
+                                selectedLabelColor = Color.Black,
+                                containerColor = PanelGlass,
+                                labelColor = SpaceText
+                            )
+                        )
+                    }
+                }
+
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("검색 결과가 없습니다", color = SpaceTextSoft, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.searchSchoolsFromNeis(searchQuery, officeFullName, selectedType)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("🌐 전국 NEIS API 조회 실행", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filtered, key = { it.schoolId }) { school ->
+                            val isCurrent = school.schoolId == activeSchoolId
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectSchool(school) }
+                                    .border(
+                                        1.dp,
+                                        if (isCurrent) NeonCyan else Color.White.copy(alpha = 0.1f),
+                                        RoundedCornerShape(8.dp)
+                                    ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isCurrent) NeonCyan.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.03f)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = school.name,
+                                            color = if (isCurrent) NeonCyan else SpaceText,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Text(
+                                            text = "초대코드: ${school.inviteCode} | ID: ${school.schoolId}",
+                                            color = SpaceTextSoft,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    if (isCurrent) {
+                                        Surface(
+                                            color = NeonCyan.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, NeonCyan)
+                                        ) {
+                                            Text(
+                                                text = "현재 선택됨 ✅",
+                                                color = NeonCyan,
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MasterAdminEditSchoolModal(
+    school: com.example.data.SchoolEntity,
+    onSave: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(school.name) }
+    var inviteCode by remember { mutableStateOf(school.inviteCode) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .clickable { }
+                .border(1.dp, NeonAmber.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = PanelSolid),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("✏️ 학교/학원 정보 수정", color = NeonAmber, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("학교/학원 명칭") },
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = inviteCode,
+                    onValueChange = { inviteCode = it },
+                    label = { Text("초대 코드") },
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
+                        Text("취소", color = SpaceTextSoft)
+                    }
+                    Button(
+                        onClick = { onSave(name, inviteCode) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonAmber, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("저장하기", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MasterAdminCreateSchoolModal(
+    onCreate: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var inviteCode by remember { mutableStateOf("SEL" + (1000..9999).random().toString()) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .clickable { }
+                .border(1.dp, NeonGreen.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = PanelSolid),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("➕ 신규 학교/학원 등록", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("학교/학원 명칭") },
+                    placeholder = { Text("예: [서울] 미래고등학교 또는 [학원] 대성학원") },
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = inviteCode,
+                    onValueChange = { inviteCode = it },
+                    label = { Text("초대 코드") },
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedTextColor = SpaceText, unfocusedTextColor = SpaceText),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
+                        Text("취소", color = SpaceTextSoft)
+                    }
+                    Button(
+                        onClick = { onCreate(name, inviteCode) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("등록하기", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------
 // HOME SCREEN (WITH REAL-TIME DIGITAL CLOCK & QUICK PORTAL ACCESS)
 // -----------------------------------------------------------------
 @Composable
@@ -2033,6 +3090,10 @@ fun HomeScreen(viewModel: MainViewModel) {
 
         // Quick Access Cards Grid for Logged-In Users or Guidance Card
         if (currentUser != null) {
+            if (viewModel.isTeacher() || viewModel.isAdmin()) {
+                MasterAdminSchoolControlPanel(viewModel)
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
