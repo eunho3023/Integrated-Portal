@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1364290968",
+    "project_id": "integrated-portal-ea306",
+    "storage_bucket": "integrated-portal-ea306.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1364290968:android:48639fe84daf2c20580fed",
+        "android_client_info": {
+          "package_name": "com.aistudio.integratedmanager.pwkqla"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9yUD2BBlbV524TTg0caf6tgRamernYIA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

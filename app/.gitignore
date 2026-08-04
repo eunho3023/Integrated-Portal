@@ -1,0 +1,10 @@
+/build
+app/build
+.build-outputs/
+.gradle/
+.idea/
+*.apk
+*.aab
+debug.keystore*
+.env
+

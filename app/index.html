@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 학급 포털 (Integrated Portal) - Web Interactive App</title>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0c14;
+            --panel-bg: #131622;
+            --panel-border: rgba(0, 242, 254, 0.18);
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-green: #00e676;
+            --accent-amber: #ffb703;
+            --accent-red: #ff0055;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --nav-bg: #0f111c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* App Container mimicking mobile device or responsive layout */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 900px;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 40px rgba(0, 242, 254, 0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Top Toast Banner UI */
+        .top-toast {
+            position: absolute;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 420px;
+            background: linear-gradient(135deg, rgba(22, 25, 38, 0.95), rgba(10, 12, 20, 0.98));
+            border: 1.5px solid var(--accent-cyan);
+            border-radius: 16px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 242, 254, 0.35);
+            z-index: 9999;
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .top-toast.show {
+            top: 16px;
+            opacity: 1;
+        }
+
+        .top-toast.info { border-color: var(--accent-cyan); }
+        .top-toast.success { border-color: var(--accent-green); }
+        .top-toast.warning { border-color: var(--accent-amber); }
+        .top-toast.danger { border-color: var(--accent-red); }
+
+        .top-toast-icon {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .top-toast-text {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                height: 90vh;
+                margin: 20px auto;
+            }
+        }
+
+        /* App Header */
+        .app-header {
+            padding: 16px;
+            background: var(--nav-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        /* Main View Container */
+        .view-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .view-pane {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .view-pane.active {
+            display: flex;
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            background: var(--nav-bg);
+            border-top: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item.active {
+            color: var(--accent-cyan);
+            background: rgba(0, 242, 254, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+
+        /* Cards & Components */
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--accent-cyan);
+        }
+
+        /* Call Overlay / Screen */
+        .call-card {
+            background: #000;
+            border: 1.5.dp solid var(--accent-purple);
+            border-radius: 20px;
+            position: relative;
+            height: 280px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scaleX(-1); /* Mirror view for front camera */
+        }
+
+        .call-overlay-ui {
+            position: relative;
+            z-index: 2;
+            padding: 12px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 30%, transparent 70%, rgba(0,0,0,0.8));
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .call-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .call-badge {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .call-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .btn-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+        }
+
+        .btn-circle.green { background: var(--accent-green); color: black; }
+        .btn-circle.red { background: var(--accent-red); }
+        .btn-circle.dark { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .btn-circle.active { background: var(--accent-cyan); color: black; }
+
+        /* Audio Visualizer Waves */
+        .audio-wave {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 18px;
+        }
+
+        .audio-bar {
+            width: 3px;
+            background: var(--accent-green);
+            border-radius: 2px;
+            height: 4px;
+            transition: height 0.08s ease;
+        }
+
+        /* Buttons & Forms */
+        .btn-full {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-cyan), #0072ff);
+            color: #000;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input, select {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        input:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Chat / Contacts List */
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .item-sub {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        /* Meal Table */
+        .meal-menu-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+            font-size: 0.88rem;
+        }
+
+        /* Q&A Posts */
+        .qa-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Top Toast Notification Banner -->
+        <div id="top-toast" class="top-toast info">
+            <div id="toast-icon" class="top-toast-icon">📞</div>
+            <div id="toast-text" class="top-toast-text">통화 상태 알림 메시지</div>
+        </div>
+
+        <!-- App Header -->
+        <header class="app-header">
+            <div class="app-title">
+                <i class="fa-solid fa-graduation-cap"></i> 통합 학급 포털
+            </div>
+            <div class="user-profile">
+                <i class="fa-solid fa-user-check"></i> 홍길동 (학생)
+            </div>
+        </header>
+
+        <!-- View Content -->
+        <div class="view-content">
+            
+            <!-- 1. 통화 / 실시간 연결 탭 -->
+            <div id="pane-call" class="view-pane active">
+                <div class="card">
+                    <div class="card-header">
+                        <span>📞 1:1 실시간 통화 & 영상통화</span>
+                        <span id="call-status-tag" class="call-badge">대기 중</span>
+                    </div>
+
+                    <!-- Call Video Preview Container -->
+                    <div class="call-card">
+                        <video id="video-preview" autoplay playsinline muted></video>
+                        <div id="no-camera-msg" style="position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #181b28; color: var(--text-secondary);">
+                            <i class="fa-solid fa-video-slash" style="font-size: 2.5rem; margin-bottom: 8px;"></i>
+                            <span style="font-size: 0.85rem;">카메라를 켜서 실시간 영상을 확인하세요</span>
+                        </div>
+
+                        <div class="call-overlay-ui">
+                            <div class="call-top-bar">
+                                <span style="font-size: 0.8rem; font-weight: bold; color: white; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 8px;">
+                                    상대방: 김철수 회원
+                                </span>
+
+                                <!-- Microphone Wave Visualizer -->
+                                <div class="audio-wave">
+                                    <div class="audio-bar" id="bar1"></div>
+                                    <div class="audio-bar" id="bar2"></div>
+                                    <div class="audio-bar" id="bar3"></div>
+                                    <div class="audio-bar" id="bar4"></div>
+                                </div>
+                            </div>
+
+                            <!-- Call Controls -->
+                            <div class="call-controls">
+                                <button class="btn-circle dark" id="btn-toggle-cam" onclick="toggleCamera()" title="카메라 ON/OFF">
+                                    <i class="fa-solid fa-video"></i>
+                                </button>
+                                <button class="btn-circle dark" id="btn-toggle-mic" onclick="toggleMic()" title="마이크 음소거">
+                                    <i class="fa-solid fa-microphone"></i>
+                                </button>
+                                <button class="btn-circle green" id="btn-call-start" onclick="startCall()" title="전화 걸기">
+                                    <i class="fa-solid fa-phone"></i>
+                                </button>
+                                <button class="btn-circle red" id="btn-call-end" onclick="endCall()" title="전화 끊기" style="display: none;">
+                                    <i class="fa-solid fa-phone-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-align: center;">
+                        ⚡ Firebase Realtime Database 실시간 통화 시그널링이 연동되어 있습니다.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>📇 빠른 통화 상대 목록</span>
+                    </div>
+                    <div class="list-item" onclick="selectPeer('김철수')">
+                        <div class="avatar">김</div>
+                        <div class="item-info">
+                            <div class="item-title">김철수</div>
+                            <div class="item-sub">1학년 2반 • 온라인</div>
+                        </div>
+                        <button class="btn-circle green" style="width: 36px; height: 36px; font-size: 0.85rem;"><i class="fa-solid fa-phone"></i></button>
+                    </div>
+                    <div class="list-item" onclick="selectPeer('이영희')">
+                        <div class="avatar" style="background: linear-gradient(135deg, #ff0055, #ffb703);">이</div>
+                        <div class="item-info">
+                            <div class="item-title">이영희</div>
+                            <div class="item-sub">1학년 2반 • 통화 가능</div>
+                        </div>
+                        <button class="btn-circle green" style="width: 36px; height: 36px; font-size: 0.85rem;"><i class="fa-solid fa-phone"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 급식 & 시간표 탭 -->
+            <div id="pane-meal" class="view-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span>🍱 오늘의 학교 급식</span>
+                        <span style="font-size: 0.8rem; color: var(--accent-cyan);" id="current-date">2026.07.31</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="date" value="2026-07-31" onchange="updateMeal(this.value)">
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px;">
+                        <div style="font-weight: bold; color: var(--accent-amber); margin-bottom: 8px; font-size: 0.9rem;">
+                            [중식 식단표]
+                        </div>
+                        <div class="meal-menu-item"><span>발아현미밥</span><span>🍚</span></div>
+                        <div class="meal-menu-item"><span>소고기 미역국</span><span>🍲</span></div>
+                        <div class="meal-menu-item"><span>돈육 고추장 불고기</span><span>🥩</span></div>
+                        <div class="meal-menu-item"><span>계란말이</span><span>🍳</span></div>
+                        <div class="meal-menu-item"><span>배추김치</span><span>🥬</span></div>
+                        <div class="meal-menu-item"><span>샤인머스캣 음료</span><span>🧃</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>📅 학급 시간표 (1학년 2반)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; text-align: center; font-size: 0.78rem;">
+                        <div style="font-weight: bold; color: var(--accent-cyan); padding: 4px;">월</div>
+                        <div style="font-weight: bold; color: var(--accent-cyan); padding: 4px;">화</div>
+                        <div style="font-weight: bold; color: var(--accent-cyan); padding: 4px;">수</div>
+                        <div style="font-weight: bold; color: var(--accent-cyan); padding: 4px;">목</div>
+                        <div style="font-weight: bold; color: var(--accent-cyan); padding: 4px;">금</div>
+
+                        <div class="card" style="padding: 6px;">국어</div>
+                        <div class="card" style="padding: 6px;">수학</div>
+                        <div class="card" style="padding: 6px;">영어</div>
+                        <div class="card" style="padding: 6px;">과학</div>
+                        <div class="card" style="padding: 6px;">체육</div>
+
+                        <div class="card" style="padding: 6px;">수학</div>
+                        <div class="card" style="padding: 6px;">사회</div>
+                        <div class="card" style="padding: 6px;">국어</div>
+                        <div class="card" style="padding: 6px;">음악</div>
+                        <div class="card" style="padding: 6px;">영어</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 지도 & 학교 검색 탭 -->
+            <div id="pane-map" class="view-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span>🗺️ 전국 학교 & 학원 위치 지도</span>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" placeholder="학교 또는 학원명 검색 (예: 중앙고등학교)">
+                        <button class="btn-full" style="width: auto; padding: 0 16px;">검색</button>
+                    </div>
+
+                    <div style="width: 100%; height: 220px; background: #1a1e2e; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--panel-border); position: relative; overflow: hidden;">
+                        <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--accent-cyan); opacity: 0.6; margin-bottom: 8px;"></i>
+                        <span style="font-size: 0.85rem; font-weight: bold;">카카오 지도 위치 매핑 연동</span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">주변 학교 12개, 학원 28개 검색됨</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Q&A 및 메시지 탭 -->
+            <div id="pane-chat" class="view-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span>❓ 실시간 학급 Q&A 게시판</span>
+                        <button class="btn-full" style="width: auto; padding: 4px 10px; font-size: 0.75rem;">질문 작성</button>
+                    </div>
+
+                    <div class="qa-card">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--accent-cyan);">
+                            <span>[수학] 질문합니다</span>
+                            <span>답변완료 🟢</span>
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">이차방정식 근의 공식 유도 과정 질문있어요!</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">작성자: 박민수 • 10분 전</div>
+                    </div>
+
+                    <div class="qa-card" style="border-left-color: var(--accent-amber);">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--accent-amber);">
+                            <span>[영어] 단어 질문</span>
+                            <span>답변대기 🟡</span>
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">교과서 3단원 주요 숙어 암기 팁 알려주실 분?</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">작성자: 이수진 • 25분 전</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('call', this)">
+                <i class="fa-solid fa-phone"></i>
+                <span>통화/영상</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('meal', this)">
+                <i class="fa-solid fa-utensils"></i>
+                <span>급식/시간표</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('map', this)">
+                <i class="fa-solid fa-map"></i>
+                <span>지도검색</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('chat', this)">
+                <i class="fa-solid fa-comments"></i>
+                <span>Q&A/메시지</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- JavaScript App Logic -->
+    <script>
+        let currentStream = null;
+        let isCamOn = false;
+        let isMicOn = true;
+        let isCallActive = false;
+        let audioContext = null;
+        let analyser = null;
+        let micAnimId = null;
+        let toastTimer = null;
+
+        function showTopToast(msg, type = 'info', icon = '📞', duration = 3000) {
+            const toast = document.getElementById('top-toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastText = document.getElementById('toast-text');
+
+            if (!toast) return;
+
+            toastIcon.textContent = icon;
+            toastText.textContent = msg;
+
+            toast.className = 'top-toast ' + type;
+            toast.classList.add('show');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.view-pane').forEach(pane => pane.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('pane-' + tabId).classList.add('active');
+            el.classList.add('active');
+        }
+
+        async function toggleCamera() {
+            const videoEl = document.getElementById('video-preview');
+            const noCamMsg = document.getElementById('no-camera-msg');
+            const btnCam = document.getElementById('btn-toggle-cam');
+
+            if (!isCamOn) {
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    videoEl.srcObject = currentStream;
+                    noCamMsg.style.display = 'none';
+                    btnCam.classList.add('active');
+                    isCamOn = true;
+                    setupMicAudioVisualizer(currentStream);
+                    showTopToast('📷 실시간 카메라 프리뷰가 활성화되었습니다.', 'info', '📷');
+                } catch (err) {
+                    showTopToast('⚠️ 카메라/마이크 권한 허용이 필요합니다.', 'warning', '⚠️');
+                }
+            } else {
+                if (currentStream) {
+                    currentStream.getVideoTracks().forEach(track => track.stop());
+                }
+                videoEl.srcObject = null;
+                noCamMsg.style.display = 'flex';
+                btnCam.classList.remove('active');
+                isCamOn = false;
+                showTopToast('📷 카메라 화면이 꺼졌습니다.', 'info', '📹');
+            }
+        }
+
+        function toggleMic() {
+            const btnMic = document.getElementById('btn-toggle-mic');
+            isMicOn = !isMicOn;
+            if (currentStream) {
+                currentStream.getAudioTracks().forEach(track => track.enabled = isMicOn);
+            }
+            if (isMicOn) {
+                btnMic.classList.remove('red');
+                showTopToast('🎙️ 마이크 음소거가 해제되었습니다.', 'info', '🎙️');
+            } else {
+                btnMic.classList.add('red');
+                showTopToast('🔇 마이크가 음소거되었습니다.', 'warning', '🔇');
+            }
+        }
+
+        function startCall() {
+            isCallActive = true;
+            document.getElementById('call-status-tag').textContent = '통화 중 (연결됨)';
+            document.getElementById('call-status-tag').style.background = 'rgba(0,230,118,0.2)';
+            document.getElementById('call-status-tag').style.color = '#00e676';
+            document.getElementById('btn-call-start').style.display = 'none';
+            document.getElementById('btn-call-end').style.display = 'flex';
+
+            showTopToast('📞 1:1 실시간 통화가 연결되었습니다!', 'success', '📞', 3500);
+
+            if (!isCamOn) {
+                toggleCamera();
+            }
+        }
+
+        function endCall() {
+            isCallActive = false;
+            document.getElementById('call-status-tag').textContent = '대기 중';
+            document.getElementById('call-status-tag').style.background = 'rgba(0,242,254,0.15)';
+            document.getElementById('call-status-tag').style.color = '#00f2fe';
+            document.getElementById('btn-call-start').style.display = 'flex';
+            document.getElementById('btn-call-end').style.display = 'none';
+
+            showTopToast('📴 통화가 종료되었습니다.', 'danger', '📴', 3000);
+
+            if (isCamOn) {
+                toggleCamera();
+            }
+        }
+
+        function setupMicAudioVisualizer(stream) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 32;
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                function updateWave() {
+                    analyser.getByteFrequencyData(dataArray);
+                    let volume = dataArray[0] || 0;
+                    
+                    for (let i = 1; i <= 4; i++) {
+                        const bar = document.getElementById('bar' + i);
+                        if (bar) {
+                            const height = Math.max(4, (volume / 255) * 18 * (i * 0.4));
+                            bar.style.height = height + 'px';
+                        }
+                    }
+                    micAnimId = requestAnimationFrame(updateWave);
+                }
+                updateWave();
+            } catch(e) {
+                console.log('Audio visualizer error', e);
+            }
+        }
+
+        function selectPeer(name) {
+            showTopToast('📞 \'' + name + '\' 회원에게 전화를 거는 중입니다...', 'info', '📲', 2500);
+            setTimeout(() => {
+                startCall();
+            }, 1000);
+        }
+
+        function updateMeal(date) {
+            document.getElementById('current-date').textContent = date;
+            showTopToast('🍱 ' + date + ' 급식 정보 조회 완료', 'success', '🍱', 2000);
+        }
+    </script>
+</body>
+</html>
